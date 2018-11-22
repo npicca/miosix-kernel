@@ -45,6 +45,7 @@
 #OPT_BOARD := stm32f205_generic
 #OPT_BOARD := stm32f103cx_generic
 #OPT_BOARD := stm32f072rb_stm32f0discovery
+#OPT_BOARD := riscv32imc_picosoc
 
 ##
 ## Optimization flags, choose one.
@@ -531,6 +532,12 @@ ifeq ($(OPT_BOARD),stm32f103cx_generic)
 
 # Actually no options
 
+##---------------------------------------------------------------------------
+## riscv32imc_picosoc
+##
+
+# No options
+
 endif
 
 ############################################################################
@@ -616,6 +623,8 @@ else ifeq ($(OPT_BOARD),stm32f103cx_generic)
     ARCH := cortexM3_stm32
 else ifeq ($(OPT_BOARD),stm32f072rb_stm32f0discovery)
     ARCH := cortexM0_stm32f0
+else ifeq ($(OPT_BOARD),riscv32imc_picosoc)
+     ARCH := riscv32imc_picorv32
 else
     $(info Error: no board specified in miosix/config/Makefile.inc)
     $(error Error)
@@ -2224,6 +2233,82 @@ else ifeq ($(ARCH),cortexM0_stm32f0)
     $(ARCH_INC)/interfaces-impl/delays.cpp                   \
     $(ARCH_INC)/interfaces-impl/gpio_impl.cpp                \
     arch/common/CMSIS/Device/ST/STM32F0xx/Source/Templates/system_stm32f0xx.c
+
+##-----------------------------------------------------------------------------
+## ARCHITECTURE: riscv32imc_picorv32
+##
+else ifeq ($(ARCH),riscv32imc_picorv32)
+    ## Base directory with else header files for this board
+    ARCH_INC := arch/riscv32imc_picorv32/common
+
+    ##-------------------------------------------------------------------------
+    ## BOARD: picosoc
+    ##
+    ifeq ($(OPT_BOARD),picosoc)
+        ## Base directory with header files for this board
+        BOARD_INC := arch/riscv32imc_picorv32/picosoc
+
+        ## Select linker script and boot file
+        ## Their path must be relative to the miosix directory.
+        BOOT_FILE := $(BOARD_INC)/core/stage_1_boot.o
+        LINKER_SCRIPT := $(BOARD_INC)/picosoc_8k+4MiB_flash.ld
+
+        ## Select architecture specific files
+        ## These are the files in arch/<arch name>/<board name>
+        #ARCH_SRC :=                                  \
+
+        ## Add a #define to allow querying board name
+        CFLAGS_BASE   += -D_BOARD_PICOSOC
+        CXXFLAGS_BASE += -D_BOARD_PICOSOC
+
+        ## Select clock frequency (HSE_VALUE is the xtal on board, fixed)
+        #CLOCK_FREQ := -DHSE_VALUE=25000000 -DSYSCLK_FREQ_400MHz=400000000
+
+        ## Select programmer command line
+        ## This is the program that is invoked when the user types
+        ## 'make program'
+        ## The command must provide a way to program the board, or print an
+        ## error message saying that 'make program' is not supported for that
+        ## board.
+        PROGRAM_CMDLINE := echo 'make program not supported.'
+
+      ##-------------------------------------------------------------------------
+      ## End of board list
+      ##
+      endif
+
+      ## Select compiler
+      PREFIX := riscv32-unknown-elf-
+
+      ## From compiler prefix form the name of the compiler and other tools
+      CC  := $(PREFIX)gcc
+      CXX := $(PREFIX)g++
+      LD  := $(PREFIX)ld
+      AR  := $(PREFIX)ar
+      AS  := $(PREFIX)as
+      CP  := $(PREFIX)objcopy
+      OD  := $(PREFIX)objdump
+      SZ  := $(PREFIX)size
+
+      ## Select appropriate compiler flags for both ASM/C/C++/linker
+      ## For now we'll fallback to M4 which is compatible, but does not support
+      ## double precision HW floating point
+      AFLAGS_BASE   := -march=rv32imc
+      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -march=rv32imc $(OPT_OPTIMIZATION) -c
+      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -march=rv32imc $(OPT_OPTIMIZATION) -c
+      LFLAGS_BASE   := -Wl,--gc-sections,-Map,main.map                            \
+                       -Wl,-T$(KPATH)/$(LINKER_SCRIPT) $(OPT_EXCEPT)              \
+                       $(OPT_OPTIMIZATION) -nostdlib
+
+      ## Select architecture specific files
+      ## These are the files in arch/<arch name>/common
+      ARCH_SRC +=                                              \
+      #arch/common/core/interrupts_cortexMx.cpp                 \
+      #arch/common/core/mpu_cortexMx.cpp                        \
+      #arch/common/core/cache_cortexMx.cpp                      \
+      #arch/common/drivers/serial_stm32.cpp                     \
+      #arch/common/drivers/dcc.cpp                              \
+      #$(ARCH_INC)/drivers/pll.cpp                              \
 
 ##-----------------------------------------------------------------------------
 ## end of architecture list
