@@ -2278,7 +2278,7 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       endif
 
       ## Select compiler
-      PREFIX := riscv32-unknown-elf-
+      PREFIX := riscv32-miosix-elf-
 
       ## From compiler prefix form the name of the compiler and other tools
       CC  := $(PREFIX)gcc

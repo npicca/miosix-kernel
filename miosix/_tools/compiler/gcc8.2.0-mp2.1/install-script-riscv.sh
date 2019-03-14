@@ -7,7 +7,7 @@
 #
 # Building Miosix is officially supported only through the gcc compiler built
 # with this script. This is because this script patches the compiler.
-# Starting from Miosix 1.58 the use of the arm-miosix-eabi-gcc compiler built
+# Starting from Miosix 1.58 the use of the riscv32-miosix-elf-gcc compiler built
 # by this script has become mandatory due to patches related to posix threads
 # in newlib. The kernel *won't* compile unless the correct compiler is used.
 #
@@ -16,7 +16,7 @@
 # download the binary relase from http://miosix.org instead of compiling GCC
 # using this script.
 #
-# This script will install arm-miosix-eabi-gcc in /opt, creating links to
+# This script will install riscv32-miosix-elf-gcc in /opt, creating links to
 # binaries in /usr/bin.
 # It should be run without root privileges, but it will ask for the root
 # password when installing files to /opt and /usr/bin
@@ -70,19 +70,19 @@ fi
 
 if [[ $HOST ]]; then
 	# Canadian cross compiling requires to have the same version of the
-	# arm-miosix-eabi-gcc that we are going to compile installed locally
+	# riscv32-miosix-elf-gcc that we are going to compile installed locally
 	# in the Linux system from which we are compiling, so as to build
 	# libc, libstdc++, ...
 	# Please note that since the already installed version of
-	# arm-miosix-eabi-gcc is used to build the standard libraries, it
+	# riscv32-miosix-elf-gcc is used to build the standard libraries, it
 	# NUST BE THE EXACT SAME VERSION, including miosix-specific patches
-	which arm-miosix-eabi-gcc > /dev/null || quit ":: Error must first install arm-miosix-eabi-gcc"
+	which riscv32-miosix-elf-gcc > /dev/null || quit ":: Error must first install riscv32-miosix-elf-gcc"
 
 	HOSTCC="$HOST-gcc"
 	HOSTSTRIP="$HOST-strip"
 	if [[ $HOST == *mingw* ]]; then
 		# Canadian cross compiling requires the windows compiler to build
-		# arm-miosix-eabi-gcc.exe, ...
+		# riscv32-miosix-elf-gcc.exe, ...
 		which "$HOST-gcc" > /dev/null || quit ":: Error must have host cross compiler"
 
 		HOSTCXX="$HOST-g++ -static -s" # For windows not to depend on libstdc++.dll
@@ -119,7 +119,7 @@ if [[ $HOST ]]; then
 		EXT=
 	fi
 else
-	export PATH=$INSTALL_DIR/arm-miosix-eabi/bin:$PATH
+	export PATH=$INSTALL_DIR/riscv32-miosix-elf/bin:$PATH
 
 	HOSTCC=gcc
 	HOSTCXX=g++
@@ -161,7 +161,7 @@ mkdir log
 #
 
 patch -p0 < patches/gcc.patch		|| quit ":: Failed patching gcc 1"
-# patch -p0 < patches/force-got.patch	|| quit ":: Failed patching gcc 2"
+patch -p0 < patches/riscv.patch	|| quit ":: Failed patching gcc 2"
 patch -p0 < patches/newlib.patch	|| quit ":: Failed patching newlib"
 
 #
@@ -241,10 +241,12 @@ cd $BINUTILS
 ./configure \
 	--build=`./config.guess` \
 	--host=$HOST \
-	--target=arm-miosix-eabi \
-	--prefix=$INSTALL_DIR/arm-miosix-eabi \
+	--target=riscv32-miosix-elf \
+	--prefix=$INSTALL_DIR/riscv32-miosix-elf \
 	--enable-interwork \
 	--enable-multilib \
+	--with-arch=rv32imc \
+	--with-abi=ilp32 \
 	--enable-lto \
 	--disable-werror 2>../log/a.txt			|| quit ":: Error configuring binutils"
 
@@ -264,12 +266,14 @@ cd objdir
 $SUDO ../$GCC/configure \
 	--build=`../$GCC/config.guess` \
 	--host=$HOST \
-	--target=arm-miosix-eabi \
+	--target=riscv32-miosix-elf \
+	--with-arch=rv32imc \
+	--with-abi=ilp32 \
 	--with-gmp=$LIB_DIR \
 	--with-mpfr=$LIB_DIR \
 	--with-mpc=$LIB_DIR \
 	MAKEINFO=missing \
-	--prefix=$INSTALL_DIR/arm-miosix-eabi \
+	--prefix=$INSTALL_DIR/riscv32-miosix-elf \
 	--disable-shared \
 	--disable-libmudflap \
 	--disable-libssp \
@@ -302,12 +306,12 @@ $SUDO make install-gcc 2>../log/f.txt		|| quit ":: Error installing gcc-start"
 # This causes troubles because newlib.h contains the _WANT_REENT_SMALL used to
 # select the appropriate _Reent struct. This error is visible to user code since
 # GCC seems to take the wrong newlib.h and user code gets the wrong _Reent struct
-$SUDO rm -rf $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/sys-include
+$SUDO rm -rf $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/sys-include
 
 # Another fix, looks like export PATH isn't enough for newlib, it fails
-# running arm-miosix-eabi-ranlib when installing
+# running riscv32-miosix-elf-ranlib when installing
 if [[ $SUDO ]]; then
-	$SUDO ln -s $INSTALL_DIR/arm-miosix-eabi/bin/* /usr/bin
+	$SUDO ln -s $INSTALL_DIR/riscv32-miosix-elf/bin/* /usr/bin
 fi
 
 cd ..
@@ -322,9 +326,11 @@ cd newlib-obj
 ../$NEWLIB/configure \
 	--build=`../$GCC/config.guess` \
 	--host=$HOST \
-	--target=arm-miosix-eabi \
-	--prefix=$INSTALL_DIR/arm-miosix-eabi \
+	--target=riscv32-miosix-elf \
+	--prefix=$INSTALL_DIR/riscv32-miosix-elf \
 	--enable-multilib \
+	--with-arch=rv32imc \
+	--with-abi=ilp32 \
 	--enable-newlib-reent-small \
 	--enable-newlib-multithread \
 	--enable-newlib-io-long-long \
@@ -335,7 +341,8 @@ cd newlib-obj
 	--disable-newlib-supplied-syscalls \
 	2>../log/g.txt							|| quit ":: Error configuring newlib"
 
-make $PARALLEL 2>../log/h.txt				|| quit ":: Error compiling newlib"
+
+make $PARALLEL 2>../log/h.txt	|| quit ":: Error compiling newlib"
 
 $SUDO make install 2>../log/i.txt			|| quit ":: Error installing newlib"
 
@@ -377,12 +384,13 @@ cd ..
 
 #
 # Part 8: check that all multilibs have been built.
-# This check has been added after an attempt to build arm-miosix-eabi-gcc on Fedora
+# This check has been added after an attempt to build riscv32-miosix-elf-gcc on Fedora
 # where newlib's multilibs were not built. Gcc produced binaries that failed on
 # Cortex M3 because the first call to a libc function was a blx into ARM instruction
 # set, but since Cortex M3 only has the thumb2 instruction set, the CPU locked.
 # By checking that all multilibs are correctly built, this error can be spotted
 # immediately instead of leaving a gcc that produces wrong code in the wild. 
+#FIXME: add appripriate riscv libs
 
 check_multilibs() {
 	if [[ ! -f $1/libc.a ]]; then
@@ -402,13 +410,13 @@ check_multilibs() {
 	fi 
 }
 
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/arm
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/thumb/cm3
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/thumb/cm4/hardfp/fpv4sp
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/thumb/cm7/hardfp/fpv5
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/thumb/cm3/pie/single-pic-base
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/thumb/cm4/hardfp/fpv4sp/pie/single-pic-base
-check_multilibs $INSTALL_DIR/arm-miosix-eabi/arm-miosix-eabi/lib/thumb/cm7/hardfp/fpv5/pie/single-pic-base
+check_multilibs $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/lib/
+check_multilibs $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/lib/rv32i/ilp32
+check_multilibs $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/lib/rv32iac/ilp32
+check_multilibs $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/lib/rv32im/ilp32
+check_multilibs $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/lib/rv32imac/ilp32
+check_multilibs $INSTALL_DIR/riscv32-miosix-elf/riscv32-miosix-elf/lib/rv32imafc/ilp32f
+
 echo "::All multilibs have been built. OK"
 
 #
@@ -441,8 +449,8 @@ cd $GDB
 ./configure \
 	--build=`../$GCC/config.guess` \
 	--host=$HOST \
-	--target=arm-miosix-eabi \
-	--prefix=$INSTALL_DIR/arm-miosix-eabi \
+	--target=riscv32-miosix-elf \
+	--prefix=$INSTALL_DIR/riscv32-miosix-elf \
 	--enable-interwork \
 	--enable-multilib \
 	--disable-werror 2>../log/l.txt			|| quit ":: Error configuring gdb"
@@ -459,7 +467,7 @@ cd ..
 cd mx-postlinker
 make CXX="$HOSTCXX" SUFFIX=$EXT				|| quit ":: Error compiling mx-postlinker"
 $SUDO make install CXX="$HOSTCXX" SUFFIX=$EXT \
-	INSTALL_DIR=$INSTALL_DIR/arm-miosix-eabi/bin \
+	INSTALL_DIR=$INSTALL_DIR/riscv32-miosix-elf/bin \
 											|| quit ":: Error installing mx-postlinker"
 make CXX="$HOSTCXX" SUFFIX=$EXT clean
 cd ..
@@ -470,7 +478,7 @@ cd ..
 
 $HOSTCC -o lpc21isp$EXT lpc21isp.c						|| quit ":: Error compiling lpc21isp"
 
-$SUDO mv lpc21isp$EXT $INSTALL_DIR/arm-miosix-eabi/bin	|| quit ":: Error installing lpc21isp"
+$SUDO mv lpc21isp$EXT $INSTALL_DIR/riscv32-miosix-elf/bin	|| quit ":: Error installing lpc21isp"
 
 #
 # Part 12: install GNU make and rm (windows release only)
@@ -482,7 +490,7 @@ if [[ $HOST == *mingw* ]]; then
 
 	./configure \
 	--host=$HOST \
-	--prefix=$INSTALL_DIR/arm-miosix-eabi 2> z.make.a.txt	|| quit ":: Error configuring make"
+	--prefix=$INSTALL_DIR/riscv32-miosix-elf 2> z.make.a.txt	|| quit ":: Error configuring make"
 
 	make all $PARALLEL 2>../log/z.make.b.txt				|| quit ":: Error compiling make"
 
@@ -493,17 +501,17 @@ if [[ $HOST == *mingw* ]]; then
 	# FIXME get a better rm to distribute for windows
 	$HOSTCC -o rm$EXT -O2 windows-installer/rm.c			|| quit ":: Error compiling rm"
 
-	mv rm$EXT $INSTALL_DIR/arm-miosix-eabi/bin				|| quit ":: Error installing rm"
+	mv rm$EXT $INSTALL_DIR/riscv32-miosix-elf/bin				|| quit ":: Error installing rm"
 
-	cp qstlink2.exe $INSTALL_DIR/arm-miosix-eabi/bin		|| quit ":: Error installing qstlink2"
+	cp qstlink2.exe $INSTALL_DIR/riscv32-miosix-elf/bin		|| quit ":: Error installing qstlink2"
 fi
 
 #
 # Part 13: Final fixups
 #
 
-# Remove this since its name is not arm-miosix-eabi-
-$SUDO rm $INSTALL_DIR/arm-miosix-eabi/bin/arm-miosix-eabi-$GCC$EXT
+# Remove this since its name is not riscv32-miosix-elf-
+$SUDO rm $INSTALL_DIR/riscv32-miosix-elf/bin/riscv32-miosix-elf-$GCC$EXT
 
 # Installers, env variables and other stuff
 if [[ $HOST ]]; then
@@ -520,10 +528,10 @@ if [[ $HOST ]]; then
 	else
 		chmod +x linux-installer/installer.sh uninstall.sh
 		# Distribute the installer and uninstaller too
-		cp linux-installer/installer.sh uninstall.sh $INSTALL_DIR/arm-miosix-eabi
+		cp linux-installer/installer.sh uninstall.sh $INSTALL_DIR/riscv32-miosix-elf
 		sh $MAKESELF.run
 		./$MAKESELF/makeself.sh --bzip2 \
-			$INSTALL_DIR/arm-miosix-eabi \
+			$INSTALL_DIR/riscv32-miosix-elf \
 			MiosixToolchainInstaller.run \
 			"Miosix toolchain for Linux" \
 			"./installer.sh"
@@ -532,12 +540,12 @@ else
 	# If sudo not an empty variable, make symlinks to /usr/bin
 	# else make a script to override PATH
 	if [[ $SUDO ]]; then
-		$SUDO ln -s $INSTALL_DIR/arm-miosix-eabi/bin/* /usr/bin
+		$SUDO ln -s $INSTALL_DIR/riscv32-miosix-elf/bin/* /usr/bin
 	else
 		echo '# Used when installing the compiler locally to test it' > env.sh
 		echo '# usage: $ . ./env.sh' >> env.sh
 		echo '# or     $ source ./env.sh' >> env.sh
-		echo "export PATH=`pwd`/gcc/arm-miosix-eabi/bin:"'$PATH' >> env.sh
+		echo "export PATH=`pwd`/gcc/riscv32-miosix-elf/bin:"'$PATH' >> env.sh
 		chmod +x env.sh
 	fi
 fi

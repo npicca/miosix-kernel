@@ -1,7 +1,15 @@
+_main_stack_size = 0x0200;
+_main_stack_top  = 0x0000 + _main_stack_size;
+ASSERT(_main_stack_size  % 8 == 0, "MAIN stack size error");
+
+_heap_end = 0x2000;
+
+ENTRY(_Z13Reset_Handlerv)
+
 MEMORY
 {
     FLASH (rx)      : ORIGIN = 0x00100000, LENGTH = 0x400000 /* entire flash, 4 MiB */
-    RAM (xrw)       : ORIGIN = 0x00000000, LENGTH = 0x002000 /* 8 KB */
+    RAM (xrw)       : ORIGIN = 0x00000200, LENGTH = 0x002000-0x200 /* 8 KB */
 }
 
 SECTIONS {
@@ -10,7 +18,11 @@ SECTIONS {
     {
         . = ALIGN(4);
         *(.text)           /* .text sections (code) */
-        *(.text*)          /* .text* sections (code) */
+        *(.text.*)	/* .text* sections (code) */
+	/*these sections for C++? */
+	*(.gcc_except_table)
+	*(.gcc_except_table.*)
+	. = ALIGN(4)
         *(.rodata)         /* .rodata sections (constants, strings, etc.) */
         *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
         *(.srodata)        /* .rodata sections (constants, strings, etc.) */
