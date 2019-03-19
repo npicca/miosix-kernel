@@ -8,6 +8,8 @@
    || defined(_ARCH_CORTEXM3_STM32L1) || defined(_ARCH_CORTEXM7_STM32F7) \
    || defined(_ARCH_CORTEXM7_STM32H7) || defined(_ARCH_CORTEXM3_EFM32GG)
 #include "interrupts_cortexMx.h"
+#elif defined(_ARCH_RISCV32IMC_PICORV32)
+#include "interrupts_riscv32_picorv32.h"
 #else
 #error "Unknown arch"
 #endif

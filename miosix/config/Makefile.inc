@@ -533,7 +533,7 @@ ifeq ($(OPT_BOARD),stm32f103cx_generic)
 # Actually no options
 
 ##---------------------------------------------------------------------------
-## riscv32imc_picosoc
+## riscv32imc_picorv32
 ##
 
 # No options
@@ -623,7 +623,7 @@ else ifeq ($(OPT_BOARD),stm32f103cx_generic)
     ARCH := cortexM3_stm32
 else ifeq ($(OPT_BOARD),stm32f072rb_stm32f0discovery)
     ARCH := cortexM0_stm32f0
-else ifeq ($(OPT_BOARD),riscv32imc_picosoc)
+else ifeq ($(OPT_BOARD),riscv32imc_picorv32)
      ARCH := riscv32imc_picorv32
 else
     $(info Error: no board specified in miosix/config/Makefile.inc)
@@ -2242,11 +2242,11 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
     ARCH_INC := arch/riscv32imc_picorv32/common
 
     ##-------------------------------------------------------------------------
-    ## BOARD: picosoc
+    ## BOARD: picorv32
     ##
-    ifeq ($(OPT_BOARD),picosoc)
+    ifeq ($(OPT_BOARD),riscv32imc_picorv32)
         ## Base directory with header files for this board
-        BOARD_INC := arch/riscv32imc_picorv32/picosoc
+        BOARD_INC := arch/riscv32imc_picorv32/riscv32imc_picorv32
 
         ## Select linker script and boot file
         ## Their path must be relative to the miosix directory.
@@ -2258,8 +2258,8 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
         #ARCH_SRC :=                                  \
 
         ## Add a #define to allow querying board name
-        CFLAGS_BASE   += -D_BOARD_PICOSOC
-        CXXFLAGS_BASE += -D_BOARD_PICOSOC
+        CFLAGS_BASE   += -D_BOARD_PICORV32
+        CXXFLAGS_BASE += -D_BOARD_PICORV32
 
         ## Select clock frequency (HSE_VALUE is the xtal on board, fixed)
         #CLOCK_FREQ := -DHSE_VALUE=25000000 -DSYSCLK_FREQ_400MHz=400000000
@@ -2302,13 +2302,11 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
 
       ## Select architecture specific files
       ## These are the files in arch/<arch name>/common
-      ARCH_SRC +=                                              \
-      #arch/common/core/interrupts_cortexMx.cpp                 \
-      #arch/common/core/mpu_cortexMx.cpp                        \
-      #arch/common/core/cache_cortexMx.cpp                      \
-      #arch/common/drivers/serial_stm32.cpp                     \
-      #arch/common/drivers/dcc.cpp                              \
-      #$(ARCH_INC)/drivers/pll.cpp                              \
+      ARCH_SRC +=                                                           \
+      arch/riscv32imc_picorv32/riscv32imc_picorv32/interfaces-impl/bsp.cpp  \
+      $(ARCH_INC)/interfaces-impl/portability.cpp                           \
+      $(ARCH_INC)/interfaces-impl/delays.cpp                                \
+      arch/common/core/interrupts_riscv32_picorv32.cpp
 
 ##-----------------------------------------------------------------------------
 ## end of architecture list

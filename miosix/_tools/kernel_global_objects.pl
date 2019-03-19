@@ -53,7 +53,8 @@ foreach my $filename (@ARGV)
 	die "$filename is not an object file." unless    $filename=~/\.o$/;
 
 	# Then use readelf to dump all sections of the file
-	my $output=`arm-miosix-eabi-readelf -SW \"$filename\"`;
+	# TODO: find a way to not hardcode binary name
+	my $output=`riscv32-miosix-elf-readelf -SW \"$filename\"`;
 	my @lines=split("\n",$output);
 
 	my $sections=0;
@@ -98,7 +99,8 @@ foreach my $filename (@ARGV)
 # started, not after
 foreach my $filename (@files_to_fix)
 {
-	my $exitcode=system("arm-miosix-eabi-objcopy \"$filename\" --rename-section .init_array=.miosix_init_array");
+    # TODO: find a way to not hardcode binary name
+	my $exitcode=system("riscv32-miosix-elf-objcopy \"$filename\" --rename-section .init_array=.miosix_init_array");
 	die "Error calling objcopy" unless($exitcode==0);
 }
 

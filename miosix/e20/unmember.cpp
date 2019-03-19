@@ -78,6 +78,9 @@ tuple<void (*)(void*), void*> unmemberLogic(unsigned long mixedField,
         //Pointer to non virtual function
         result=reinterpret_cast<void (*)(void*)>(mixedField);
     }
+    #elif defined(_ARCH_RISCV32IMC_PICORV32)
+    // TODO: implement unmember()
+    void (*result)(void*);
     #else
     #error The layout of virtual function pointer is unknown for this arch
     #endif

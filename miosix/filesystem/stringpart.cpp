@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 #include "stringpart.h"
+#include <string.h>
 #include <cassert>
 
 using namespace std;
@@ -127,7 +128,9 @@ size_t StringPart::findLastOf(char c) const
 {
     const char *begin=c_str();
     //Not strrchr() to take advantage of knowing the string length
-    void *index=memrchr(begin,c,length());
+    // void *index=memrchr(begin,c,length());
+    // TODO: Actually memrchr is not found by the compiler
+    void *index=strrchr(begin,c);
     if(index==0) return std::string::npos;
     return reinterpret_cast<char*>(index)-begin;
 }
