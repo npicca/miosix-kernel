@@ -154,7 +154,7 @@ SECTIONS
         _edata = .;
     } > ram AT > flash
     _etext = LOADADDR(.data);
-
+    . = ALIGN(16);
     /* .bss section: uninitialized global variables go to ram */
     _bss_start = .;
     .bss :
@@ -162,10 +162,16 @@ SECTIONS
         *(.bss)
         *(.bss.*)
         *(.gnu.linkonce.b.*)
-        . = ALIGN(8);
+        . = ALIGN(16);
+    } > ram
+    . = ALIGN(16);
+    .sbss : {
+    *(.sbss)
+    *(.sbss.*)
+    . = ALIGN(16);
     } > ram
     _bss_end = .;
-
+    . = ALIGN(16);
     _end = .;
     PROVIDE(end = .);
 }

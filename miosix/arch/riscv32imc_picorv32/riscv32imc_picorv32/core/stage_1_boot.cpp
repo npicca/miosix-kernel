@@ -61,7 +61,8 @@ void program_startup()
 	//enables xram, before touching .data and .bss
 	//Third, this is a performance improvement since the loops that initialize
 	//.data and zeros .bss now run with the CPU at full speed instead of 8MHz
-    asm volatile ( \
+
+    //asm volatile ( \
             "li t5, 0x200\n"\
             "li t6, 0x2000\n"\
             "mem_loop:\n"\
