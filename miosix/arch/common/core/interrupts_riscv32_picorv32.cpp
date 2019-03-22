@@ -31,6 +31,8 @@
 #include "interfaces/portability.h"
 #include "interfaces/arch_registers.h"
 #include "interrupts.h"
+#include "interfaces-impl/custom_ops.h"
+#include "miosix.h"
 
 using namespace miosix;
 
@@ -64,14 +66,89 @@ static void printUnsignedInt(unsigned int x)
  */
 static unsigned int getProgramCounter()
 {
-    // TODO: Implement getProgramCounter
-    return 0;
+    register int reg;
+    picorv32_getq_insn(t6, q0);
+    asm volatile (
+            "add t6, t6, zero"
+            :"=r"(reg));
+    return reg;
 }
 
 void NMI_Handler()
 {
     IRQerrorLog("\r\n***Unexpected NMI\r\n");
     miosix_private::IRQsystemReboot();
+}
+
+//todo: make it do something useful
+void IRQEntrypoint() {
+    register int IRQ_vect, saved_ra;
+    //first of all, let's save the registers
+    //asm volatile("  addi sp, sp, -4*32                       \n"                         \
+                    "sw x1,   0*4+0(sp)                    \n"                         \
+                    "sw x2,   1*4+0(sp)                    \n"                         \
+                    "sw x3,   2*4+0(sp)                    \n"                         \
+                    "sw x4,   3*4+0(sp)                    \n"                         \
+                    "sw x5,   4*4+0(sp)                    \n"                         \
+                    "sw x6,   5*4+0(sp)                    \n"                         \
+                    "sw x7,   6*4+0(sp)                    \n"                         \
+                    "sw x8,   7*4+0(sp)                    \n"                         \
+                    "sw x9,   8*4+0(sp)                    \n"                         \
+                    "sw x10,  9*4+0(sp)                    \n"                         \
+                    "sw x11, 10*4+0(sp)                    \n"                         \
+                    "sw x12, 11*4+0(sp)                    \n"                         \
+                    "sw x13, 12*4+0(sp)                    \n"                         \
+                    "sw x14, 13*4+0(sp)                    \n"                         \
+                    "sw x15, 14*4+0(sp)                    \n"                         \
+                    "sw x16, 15*4+0(sp)                    \n"                         \
+                    "sw x17, 16*4+0(sp)                    \n"                         \
+                    "sw x18, 17*4+0(sp)                    \n"                         \
+                    "sw x19, 18*4+0(sp)                    \n"                         \
+                    "sw x20, 19*4+0(sp)                    \n"                         \
+                    "sw x21, 20*4+0(sp)                    \n"                         \
+                    "sw x22, 21*4+0(sp)                    \n"                         \
+                    "sw x23, 22*4+0(sp)                    \n"                         \
+                    "sw x24, 23*4+0(sp)                    \n"                         \
+                    "sw x25, 24*4+0(sp)                    \n"                         \
+                    "sw x26, 25*4+0(sp)                    \n"                         \
+                    "sw x27, 26*4+0(sp)                    \n"                         \
+                    "sw x28, 27*4+0(sp)                    \n"                         \
+                    "sw x29, 28*4+0(sp)                    \n"                         \
+                    "sw x30, 29*4+0(sp)                    \n"                         \
+                    "sw x31, 30*4+0(sp)                    \n"                         \
+    );
+
+    picorv32_getq_insn(t0,q0);
+    asm volatile("add %0, t0, zero":"=r"(saved_ra));
+
+    picorv32_getq_insn(t1, q1);
+    asm volatile("add %0, t1, zero":"=r"(IRQ_vect));
+
+    if(IRQ_vect & UF_UNALIGNED){
+
+        void* x = malloc(sizeof(int));
+        //unaligned memory access!
+        //According to the RISC-V ISA, unaligned memory access
+        //support is mandatory, be it implemented in hardware or
+        //in the software fault handler. Since picorv32 doesn't support
+        //it, we must do it by hand
+        if(saved_ra & 0x1){
+            //compressed instruction, TODO: implement
+        } else{
+            //standard 32-bit sized instruction
+            uint32_t instr = *((uint32_t*)(saved_ra - 4));
+            int opcode = instr & 0x7f;
+            switch(opcode){
+                case 0: //load instr
+                    break;
+                case 20: //store instr
+                    break;
+            }
+
+        }
+        for(;;){}
+    }
+    picorv32_retirq_insn();
 }
 
 void unexpectedInterrupt()

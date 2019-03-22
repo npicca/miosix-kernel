@@ -45,7 +45,7 @@
 #OPT_BOARD := stm32f205_generic
 #OPT_BOARD := stm32f103cx_generic
 #OPT_BOARD := stm32f072rb_stm32f0discovery
-#OPT_BOARD := riscv32imc_picosoc
+OPT_BOARD := riscv32imc_picorv32
 
 ##
 ## Optimization flags, choose one.
@@ -53,8 +53,8 @@
 ## -O2 is recomended otherwise, as it provides a good balance between code
 ## size and speed
 ##
-#OPT_OPTIMIZATION := -O0
-OPT_OPTIMIZATION := -O2
+OPT_OPTIMIZATION := -O0
+#OPT_OPTIMIZATION := -O2
 #OPT_OPTIMIZATION := -O3
 #OPT_OPTIMIZATION := -Os
 
@@ -2294,8 +2294,8 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       ## For now we'll fallback to M4 which is compatible, but does not support
       ## double precision HW floating point
       AFLAGS_BASE   := -march=rv32imc
-      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -march=rv32imc $(OPT_OPTIMIZATION) -c
-      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -march=rv32imc $(OPT_OPTIMIZATION) -c
+      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -fomit-frame-pointer -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
+      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -fomit-frame-pointer -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
       LFLAGS_BASE   := -Wl,--gc-sections,-Map,main.map                            \
                        -Wl,-T$(KPATH)/$(LINKER_SCRIPT) $(OPT_EXCEPT)              \
                        $(OPT_OPTIMIZATION) -nostdlib
@@ -2307,6 +2307,7 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       $(ARCH_INC)/interfaces-impl/portability.cpp                           \
       $(ARCH_INC)/interfaces-impl/delays.cpp                                \
       arch/common/core/interrupts_riscv32_picorv32.cpp
+
 
 ##-----------------------------------------------------------------------------
 ## end of architecture list

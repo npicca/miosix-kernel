@@ -25,20 +25,24 @@
  *   and any data has been initialized. For this reason, it cannot do any
  *   initialization of variables etc.
  *****************************************************************************/
-// TODO: decide where to put SystemInit and NVIC_SystemReset
-void SystemInit(void)
+
+
+void reset_stub(void) __attribute__((section(".bootstub"), naked));
+void reset_stub(void){
+    asm volatile(\
+    "j _Z13Reset_Handlerv\n"\
+    ".balign 16          \n"\
+    "j _Z13IRQEntrypointv\n"\
+    );
+}
+
+
+ // TODO: decide where to put SystemInit and NVIC_SystemReset
+void inline SystemInit(void)
 {
 	// TODO: implement SystemInit
 }
 
-/**
-  \brief   System Reset
-  \details Initiates a system reset request to reset the MCU.
- */
-static inline void NVIC_SystemReset(void)
-{
-	// TODO: implement NVIC_SystemReset
-}
 
 /**
  * Called by Reset_Handler, performs initialization and calls main.
@@ -47,10 +51,7 @@ static inline void NVIC_SystemReset(void)
 void program_startup() __attribute__((noreturn));
 void program_startup()
 {
-    //Cortex M3 core appears to get out of reset with interrupts already enabled
-    __disable_irq();
-
-	//SystemInit() is called *before* initializing .data and zeroing .bss
+    //SystemInit() is called *before* initializing .data and zeroing .bss
 	//Despite all startup files provided by ST do the opposite, there are three
 	//good reasons to do so:
 	//First, the CMSIS specifications say that SystemInit() must not access
@@ -60,6 +61,15 @@ void program_startup()
 	//enables xram, before touching .data and .bss
 	//Third, this is a performance improvement since the loops that initialize
 	//.data and zeros .bss now run with the CPU at full speed instead of 8MHz
+    asm volatile ( \
+            "li t5, 0x200\n"\
+            "li t6, 0x2000\n"\
+            "mem_loop:\n"\
+            "sw zero, 0(t5)\n"\
+            "addi t5, t5, 4\n"\
+            "bne t5, t6, mem_loop\n"\
+            );
+
     SystemInit();
 
 	//These are defined in the linker script
@@ -82,31 +92,16 @@ void program_startup()
 	_init();
 
 	//If main returns, reboot
-	NVIC_SystemReset();
-    for(;;) ;
+	asm volatile ("j _Z15program_startupv");
 }
 
 /**
  * Reset handler, called by hardware immediately after reset
  */
-void Reset_Handler() __attribute__((__interrupt__, noreturn));
+void Reset_Handler() __attribute__((__interrupt__, noreturn, naked));
 void Reset_Handler()
 {
-    /*
-     * Initialize process stack and switch to it.
-     * This is required for booting Miosix, a small portion of the top of the
-     * heap area will be used as stack until the first thread starts. After,
-     * this stack will be abandoned and the process stack will point to the
-     * current thread's stack.
-     */
-    // TODO: implement ResetHandler
-    /*
-    asm volatile("ldr r0,  =_heap_end          \n\t"
-                 "msr psp, r0                  \n\t"
-                 "movw r0, #2                  \n\n" //Privileged, process stack
-                 "msr control, r0              \n\t"
-                 "isb                          \n\t":::"r0");
-    */
+    asm volatile("la sp,  _heap_end");
 
     program_startup();
 }

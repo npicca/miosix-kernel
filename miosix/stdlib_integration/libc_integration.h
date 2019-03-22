@@ -88,7 +88,7 @@ public:
 private:
     CReentrancyData(const CReentrancyData&);
     CReentrancyData& operator=(const CReentrancyData&);
-
+    
     struct _reent *threadReent; ///< Pointer to the reentrancy structure
     
     /**

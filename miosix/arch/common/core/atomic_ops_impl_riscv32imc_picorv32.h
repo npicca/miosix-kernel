@@ -46,49 +46,54 @@ namespace miosix {
 
 inline int atomicSwap(volatile int *p, int v)
 {
-    InterruptDisableLock dLock;
-    
+    //InterruptDisableLock dLock;
+    disableInterrupts();
     int result = *p;
     *p = v;
+    enableInterrupts();
     return result;
 }
 
 inline void atomicAdd(volatile int *p, int incr)
 {
-    InterruptDisableLock dLock;
-    
+    //InterruptDisableLock dLock;
+    disableInterrupts();
     *p += incr;
+    enableInterrupts();
 }
 
 inline int atomicAddExchange(volatile int *p, int incr)
 {
-    InterruptDisableLock dLock;
-    
+    //InterruptDisableLock dLock;
+    disableInterrupts();
     int result = *p;
     *p += incr;
+    enableInterrupts();
     return result;
 }
 
 inline int atomicCompareAndSwap(volatile int *p, int prev, int next)
 {
-    InterruptDisableLock dLock;
-    
+    //InterruptDisableLock dLock;
+    disableInterrupts();
     int result = *p;
     if(*p == prev) *p = next;
+    enableInterrupts();
     return result;
 }
 
 inline void *atomicFetchAndIncrement(void * const volatile * p, int offset,
         int incr)
 {
-    InterruptDisableLock dLock;
-    
+    //InterruptDisableLock dLock;
+    disableInterrupts();
     volatile uint32_t *pt;
     
     void *result = *p;
     if(result == 0) return 0;
     pt = reinterpret_cast<uint32_t*>(result) + offset;
     *pt += incr;
+    enableInterrupts();
     return result;
 }
 

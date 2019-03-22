@@ -43,23 +43,23 @@ namespace miosix {
 \{
 */
 
+#define LED (*((volatile  char*) 0x03000000))
+
+
 /**
  * \internal
  * used by the ledOn() and ledOff() implementation
  */
-/*
-typedef Gpio<GPIOD_BASE,14> _led;
-
 inline void ledOn()
 {
-    _led::high();
+    LED = '\xff';
 }
 
 inline void ledOff()
 {
-    _led::low();
+    LED = '\x00';
 }
-*/
+
 
 /**
 \}

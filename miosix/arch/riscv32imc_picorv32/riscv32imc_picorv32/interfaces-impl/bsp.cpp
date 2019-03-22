@@ -89,7 +89,7 @@ void shutdown()
 
 void reboot()
 {
-    ioctl(STDOUT_FILENO,IOCTL_SYNC,0);
+    //ioctl(STDOUT_FILENO,IOCTL_SYNC,0);
     
     #ifdef WITH_FILESYSTEM
     FilesystemManager::instance().umountAll();

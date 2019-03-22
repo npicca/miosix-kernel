@@ -199,7 +199,8 @@ void IRQsystemReboot()
 void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
         void *argv)
 {
-    unsigned int *stackPtr=sp;
+    //TODO: fix with riscv registers (non ho idea di cosa faccia, per ora piallo via)
+  /*  unsigned int *stackPtr=sp;
     stackPtr--; //Stack is full descending, so decrement first
     *stackPtr=0x01000000; stackPtr--;                                 //--> xPSR
     *stackPtr=reinterpret_cast<unsigned long>(
@@ -214,7 +215,7 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
     ctxsave[0]=reinterpret_cast<unsigned long>(stackPtr);             //--> psp
     //leaving the content of r4-r11 uninitialized
     ctxsave[9]=0xfffffffd; //EXC_RETURN=thread mode, use psp, no floating ops
-    //leaving the content of s16-s31 uninitialized
+    //leaving the content of s16-s31 uninitialized*/
 }
 
 #ifdef WITH_PROCESSES
@@ -294,42 +295,16 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
 
 void IRQportableStartKernel()
 {
-    // TODO: implement IRQportableStartKernel
-    /*
-    //Enable fault handlers
-    SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk
-            | SCB_SHCSR_MEMFAULTENA_Msk;
-    //Enable traps for division by zero. Trap for unaligned memory access
-    //was removed as gcc starting from 4.7.2 generates unaligned accesses by
-    //default (https://www.gnu.org/software/gcc/gcc-4.7/changes.html)
-    SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk;
-    NVIC_SetPriorityGrouping(7);//This should disable interrupt nesting
-    NVIC_SetPriority(SVCall_IRQn,3);//High priority for SVC (Max=0, min=15)
-    NVIC_SetPriority(SysTick_IRQn,3);//High priority for SysTick (Max=0, min=15)
-    NVIC_SetPriority(MemoryManagement_IRQn,2);//Higher priority for MemoryManagement (Max=0, min=15)
-    SysTick->LOAD=SystemCoreClock/miosix::TICK_FREQ;
-    //Start SysTick, set to generate interrupts
-    SysTick->CTRL=SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk |
-            SysTick_CTRL_CLKSOURCE_Msk;
 
-    #ifdef WITH_PROCESSES
-    miosix::IRQenableMPUatBoot();
-    #endif //WITH_PROCESSES
-    #ifdef SCHED_TYPE_CONTROL_BASED
-    AuxiliaryTimer::IRQinit();
-    #endif //SCHED_TYPE_CONTROL_BASED
-    
     //create a temporary space to save current registers. This data is useless
     //since there's no way to stop the sheduler, but we need to save it anyway.
     unsigned int s_ctxsave[miosix::CTXSAVE_SIZE];
     ctxsave=s_ctxsave;//make global ctxsave point to it
     //Note, we can't use enableInterrupts() now since the call is not mathced
     //by a call to disableInterrupts()
-    __enable_fault_irq();
     __enable_irq();
     miosix::Thread::yield();
     //Never reaches here
-    */
 }
 
 void sleepCpu()

@@ -49,7 +49,7 @@ MEMORY
     flash(rx)   : ORIGIN = 0x0100000, LENGTH = 4M
 
     /*
-     * Note, the ram starts at 0x20000000 but it is necessary to add the size
+     * Note, the ram starts at 0x0 but it is necessary to add the size
      * of the main stack, so it is 0x20000200.
      */
     ram(wx)     : ORIGIN = 0x200, LENGTH =  8K-_main_stack_size
@@ -59,13 +59,15 @@ MEMORY
 SECTIONS
 {
     . = 0;
-
+    .bootstub :
+    {
+        KEEP(*(.bootstub))
+    } > flash
     /* .text section: code goes to flash */
     .text :
     {
         /* Startup code must go at address 0 */
         /* KEEP(*(.isr_vector)) */
-
         *(.text)
         *(.text.*)
         *(.gnu.linkonce.t.*)

@@ -32,6 +32,7 @@
 #include "interfaces/arch_registers.h"
 #include "interfaces/portability.h"
 #include "config/miosix_settings.h"
+#include "core/interrupts.h"
 
 #include "custom_ops.h"
 /**
@@ -61,24 +62,14 @@ extern volatile unsigned int *ctxsave;
  * \def saveContext()
  * Save context from an interrupt<br>
  * Must be the first line of an IRQ where a context switch can happen.
- * The IRQ must be "naked" to prevent the compiler from generating context save.
- * 
- * A note on the dmb instruction, without it a race condition was observed
- * between pauseKernel() and IRQfindNextThread(). pauseKernel() uses an strex
- * instruction to store a value in the global variable kernel_running which is
- * tested by the context switch code in IRQfindNextThread(). Without the memory
- * barrier IRQfindNextThread() would occasionally read the previous value and
- * perform a context switch while the kernel was paused, leading to deadlock.
- * The failure was only observed within the exception_test() in the testsuite
- * running on the stm32f429zi_stm32f4discovery.
  */
 
-#define saveContext()                                                         \
-{                                                                       \
-    picorv32_setq_insn(q2, t0); /* save t0 to q2 */                \
-    picorv32_setq_insn(q3, t1); /* save t1 to q3 */               \
+#define saveContext()                                                          \
+{                                                                              \
+    picorv32_setq_insn(q2, t0); /* save t0 to q2 */                            \
+    picorv32_setq_insn(q3, t1); /* save t1 to q3 */                            \
     asm volatile(                                                              \
-            "la t0, ctxsave \n"  /* save t1 to q3 */                          \
+            "la t0, ctxsave                        \n"                         \
             "sw x1,   0*4+0(t0)                    \n"                         \
             "sw x2,   1*4+0(t0)                    \n"                         \
             "sw x3,   2*4+0(t0)                    \n"                         \
@@ -119,20 +110,44 @@ extern volatile unsigned int *ctxsave;
  * of an IRQ where a context switch can happen. The IRQ must be "naked" to
  * prevent the compiler from generating context restore.
  */
-#define restoreContext()  {}
-// TODO: implement restoreContext
-//{                                                                              \
-//    asm volatile("   ldr    r0,  =ctxsave       \n"/*get current context    */ \
-//                 "   ldr    r0,  [r0]           \n"                            \
-//                 "   ldmia  r0!, {r1,r4-r11,lr} \n"/*load r1(psp),r4-r11,lr */ \
-//                 "   lsls   r2,  lr,  #27       \n"/*check if bit #4 is set */ \
-//                 "   bmi    0f                  \n"                            \
-//                 "   vldmia.32 r0, {s16-s31}    \n"/*restore s16-s31 if need*/ \
-//                 "0: msr    psp, r1             \n"/*restore PROCESS sp*/      \
-//                 "   bx     lr                  \n"/*return*/                  \
-//                 );                                                            \
-//}
-
+#define restoreContext()                                                       \
+{                                                                              \
+        asm volatile(                                                          \
+            "la t0, ctxsave                        \n"                         \
+            "lw x1,   0*4+0(t0)                    \n"                         \
+            "lw x2,   1*4+0(t0)                    \n"                         \
+            "lw x3,   2*4+0(t0)                    \n"                         \
+            "lw x4,   3*4+0(t0)                    \n"                         \
+            "lw x5,   4*4+0(t0)                    \n"   /* x5 is t0 */        \
+            "lw x6,   5*4+0(t0)                    \n"                         \
+            "lw x7,   6*4+0(t0)                    \n"                         \
+            "lw x8,   7*4+0(t0)                    \n"                         \
+            "lw x9,   8*4+0(t0)                    \n"                         \
+            "lw x10,  9*4+0(t0)                    \n"                         \
+            "lw x11, 10*4+0(t0)                    \n"                         \
+            "lw x12, 11*4+0(t0)                    \n"                         \
+            "lw x13, 12*4+0(t0)                    \n"                         \
+            "lw x14, 13*4+0(t0)                    \n"                         \
+            "lw x15, 14*4+0(t0)                    \n"                         \
+            "lw x16, 15*4+0(t0)                    \n"                         \
+            "lw x17, 16*4+0(t0)                    \n"                         \
+            "lw x18, 17*4+0(t0)                    \n"                         \
+            "lw x19, 18*4+0(t0)                    \n"                         \
+            "lw x20, 19*4+0(t0)                    \n"                         \
+            "lw x21, 20*4+0(t0)                    \n"                         \
+            "lw x22, 21*4+0(t0)                    \n"                         \
+            "lw x23, 22*4+0(t0)                    \n"                         \
+            "lw x24, 23*4+0(t0)                    \n"                         \
+            "lw x25, 24*4+0(t0)                    \n"                         \
+            "lw x26, 25*4+0(t0)                    \n"                         \
+            "lw x27, 26*4+0(t0)                    \n"                         \
+            "lw x28, 27*4+0(t0)                    \n"                         \
+            "lw x29, 28*4+0(t0)                    \n"                         \
+            "lw x30, 29*4+0(t0)                    \n"                         \
+            "lw x31, 30*4+0(t0)                    \n"                         \
+            );                                                                 \
+        picorv32_getq_insn(t0, q2);                                            \
+}
 
 /**
  * \}
@@ -158,38 +173,30 @@ inline void doYield()
 
 inline void doDisableInterrupts()
 {
-    // TODO: implement interrupt disable
-    saveContext();
-    return;
-    // Documentation says __disable_irq() disables all interrupts with
-    // configurable priority, so also SysTick and SVC.
-    // No need to disable faults with __disable_fault_irq()
-    // __disable_irq();
-    //The new fastDisableInterrupts/fastEnableInterrupts are inline, so there's
-    //the need for a memory barrier to avoid aggressive reordering
-    // asm volatile("":::"memory");
+    __disable_irq();
 }
 
 inline void doEnableInterrupts()
 {
-    // TODO: implement interrupt enable
-    return;
-    // __enable_irq();
-    //The new fastDisableInterrupts/fastEnableInterrupts are inline, so there's
-    //the need for a memory barrier to avoid aggressive reordering
-    // asm volatile("":::"memory");
+    __enable_irq();
 }
 
 inline bool checkAreInterruptsEnabled()
 {
-    // TODO: implement checkAreInterruptsEnabled
-    return false;
-    /*
+    // PicoRV32 doesn't offer a way to check the value of the IRQ_Mask register without writing to it
+    // First we disable all interrupts, and save old value of IRQ_Mask in t6
+    asm volatile(
+    "li t6, 0xffffffff"
+    );
+    picorv32_maskirq_insn(t6,t6);
+
+    //Then we set IRQ_Mask as it was before, to avoid issues
+    picorv32_maskirq_insn(t6, zero);
+
     register int i;
-    asm volatile("mrs   %0, primask    \n\t":"=r"(i));
-    if(i!=0) return false;
-    return true;
-     */
+
+    asm volatile("add t6,t6, zero":"=r"(i));
+    return (i == 0);
 }
 
 #ifdef WITH_PROCESSES

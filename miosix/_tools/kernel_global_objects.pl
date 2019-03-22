@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 #
-# usage: perl kernel_global_objects.pl <list of .o files to check>
+# usage: perl kernel_global_objects.pl <objdump prefix> <list of .o files to check>
 # returns 0 on success, !=0 on failure.
 #
 # This program checks every object file in the kernel for the presence of
@@ -44,6 +44,8 @@ my @files_with_global_objects;
 my @files_to_fix;
 my @files_broken;
 
+my $prefix = shift @ARGV;
+
 # Step #1: check all kernel object files and categorize them based on the
 # relevant sections
 foreach my $filename (@ARGV)
@@ -53,8 +55,7 @@ foreach my $filename (@ARGV)
 	die "$filename is not an object file." unless    $filename=~/\.o$/;
 
 	# Then use readelf to dump all sections of the file
-	# TODO: find a way to not hardcode binary name
-	my $output=`riscv32-miosix-elf-readelf -SW \"$filename\"`;
+	my $output=`${prefix}readelf -SW \"$filename\"`;
 	my @lines=split("\n",$output);
 
 	my $sections=0;
@@ -99,8 +100,7 @@ foreach my $filename (@ARGV)
 # started, not after
 foreach my $filename (@files_to_fix)
 {
-    # TODO: find a way to not hardcode binary name
-	my $exitcode=system("riscv32-miosix-elf-objcopy \"$filename\" --rename-section .init_array=.miosix_init_array");
+	my $exitcode=system("${prefix}-objcopy \"$filename\" --rename-section .init_array=.miosix_init_array");
 	die "Error calling objcopy" unless($exitcode==0);
 }
 

@@ -74,7 +74,7 @@ DFLAGS    := -MMD -MP
 ## it must not end up in libmiosix.a
 all: $(OBJ) $(BOOT_FILE)
 	$(ECHO) "[PERL] Checking global objects"
-	$(Q)perl _tools/kernel_global_objects.pl $(OBJ)
+	$(Q)perl _tools/kernel_global_objects.pl  $(PREFIX) $(OBJ)
 	$(ECHO) "[AR  ] libmiosix.a"
 	$(Q)$(AR) rcs libmiosix.a $(OBJ)
 
