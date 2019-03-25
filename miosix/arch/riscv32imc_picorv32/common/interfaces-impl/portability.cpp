@@ -39,6 +39,8 @@
 #include <cstring>
 #include <cassert>
 
+#include "kernel/logging.h"
+
 /**
  * \internal
  * timer interrupt routine.
@@ -116,49 +118,8 @@ void ISR_preempt()
 void ISR_yield() __attribute__((noinline));
 void ISR_yield()
 {
-    #ifdef WITH_PROCESSES
-    // WARNING: Temporary fix. Rationale:
-    // This fix is intended to avoid kernel or process faulting due to
-    // another process actions. Consider the case in which a process statically
-    // allocates a big array such that there is no space left for saving
-    // context data. If the process issues a system call, in the following
-    // interrupt the context is saved, but since there is no memory available
-    // for all the context data, a mem manage interrupt is set to 'pending'. Then,
-    // a fake syscall is issued, based on the value read on the stack (which
-    // the process hasn't set due to the memory fault and is likely to be 0);
-    // this syscall is usually a yield (due to the value of 0 above),
-    // which can cause the scheduling of the kernel thread. At this point,
-    // the pending mem fault is issued from the kernel thread, causing the
-    // kernel fault and reboot. This is caused by the mem fault interrupt
-    // having less priority of the other interrupts.
-    // This fix checks if there is a mem fault interrupt pending, and, if so,
-    // it clears it and returns before calling the previously mentioned fake
-    // syscall.
-    if(SCB->SHCSR & (1<<13))
-    {
-        if(miosix::Thread::IRQreportFault(miosix_private::FaultData(
-            MP,0,0)))
-        {
-            SCB->SHCSR &= ~(1<<13); //Clear MEMFAULTPENDED bit
-            return;
-        }
-    }
-    #endif // WITH_PROCESSES
     IRQstackOverflowCheck();
-    
-    #ifdef WITH_PROCESSES
-    //If processes are enabled, check the content of r3. If zero then it
-    //it is a simple yield, otherwise handle the syscall
-    //Note that it is required to use ctxsave and not cur->ctxsave because
-    //at this time we do not know if the active context is user or kernel
-    unsigned int threadSp=ctxsave[0];
-    unsigned int *processStack=reinterpret_cast<unsigned int*>(threadSp);
-    if(processStack[3]!=miosix::SYS_YIELD)
-        miosix::Thread::IRQhandleSvc(processStack[3]);
-    else miosix::Scheduler::IRQfindNextThread();
-    #else //WITH_PROCESSES
     miosix::Scheduler::IRQfindNextThread();
-    #endif //WITH_PROCESSES
 }
 
 #ifdef SCHED_TYPE_CONTROL_BASED
@@ -173,49 +134,140 @@ void ISR_auxTimer()
     IRQstackOverflowCheck();
     miosix::Scheduler::IRQfindNextThread();//If the kernel is running, preempt
     if(miosix::kernel_running!=0) miosix::tick_skew=true;
-    TIM3->SR=0;
 }
 #endif //SCHED_TYPE_CONTROL_BASED
 
 void IRQstackOverflowCheck()
 {
+
     const unsigned int watermarkSize=miosix::WATERMARK_LEN/sizeof(unsigned int);
     for(unsigned int i=0;i<watermarkSize;i++)
     {
-        if(miosix::cur->watermark[i]!=miosix::WATERMARK_FILL)
+        if(miosix::cur->watermark[i]!=miosix::WATERMARK_FILL){
             miosix::errorHandler(miosix::STACK_OVERFLOW);
+
+        }
     }
-    if(miosix::cur->ctxsave[0] < reinterpret_cast<unsigned int>(
+
+    if(miosix::cur->ctxsave[1] < reinterpret_cast<unsigned int>(
             miosix::cur->watermark+watermarkSize))
         miosix::errorHandler(miosix::STACK_OVERFLOW);
 }
 
 void IRQsystemReboot()
 {
-    //TODO: implement irqsystemreboot
-    //NVIC_SystemReset();
+    doDisableInterrupts();
+    asm volatile("j _Z13Reset_Handlerv\n");
+}
+
+//todo: fix unaligned access
+void IRQEntrypoint() __attribute__((__interrupt__, noreturn, naked));
+void IRQEntrypoint()
+{
+    saveContext();
+
+    register int IRQ_vect, saved_ra;
+
+    picorv32_getq_insn(t6,q0);
+    asm volatile("add %0, t6, zero":"=r"(saved_ra));
+
+    picorv32_getq_insn(t5, q1);
+    asm volatile("add %0, t5, zero":"=r"(IRQ_vect));
+
+    if(IRQ_vect & UF_UNALIGNED){
+
+        /* void* x = malloc(sizeof(int));
+         //unaligned memory access!
+         //According to the RISC-V ISA, unaligned memory access
+         //support is mandatory, be it implemented in hardware or
+         //in the software fault handler. Since picorv32 doesn't support
+         //it, we must do it by hand
+         if(saved_ra & 0x1){
+             //compressed instruction, TODO: implement
+         } else{
+             //standard 32-bit sized instruction
+             uint32_t instr = *((uint32_t*)(saved_ra - 4));
+             int opcode = instr & 0x7f;
+             switch(opcode){
+                 case 0: //load instr
+                     break;
+                 case 20: //store instr
+                     break;
+             }
+
+         }*/
+
+        for(;;){}
+    }
+
+    if(IRQ_vect & ECALL){
+        IRQstackOverflowCheck();
+        miosix::Scheduler::IRQfindNextThread();
+    }
+
+    if(IRQ_vect & TIMER){
+        IRQstackOverflowCheck();
+
+        picorv32_setq_insn(q3, t6);
+
+        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
+
+        picorv32_timer_insn(zero, t6);
+
+        picorv32_getq_insn(t6, q3);
+
+        miosix::IRQtickInterrupt();
+        if(miosix::kernel_running!=0) miosix::tick_skew=true;
+
+    }
+    if(IRQ_vect & 0xfffffff8){
+        IRQbootlog("UNEXPECTED IRQ");
+        //todo: handle better
+        for(;;){}
+    }
+    restoreContext()
+    picorv32_retirq_insn();
 }
 
 void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
         void *argv)
 {
-    //TODO: fix with riscv registers (non ho idea di cosa faccia, per ora piallo via)
-  /*  unsigned int *stackPtr=sp;
-    stackPtr--; //Stack is full descending, so decrement first
-    *stackPtr=0x01000000; stackPtr--;                                 //--> xPSR
-    *stackPtr=reinterpret_cast<unsigned long>(
-            &miosix::Thread::threadLauncher); stackPtr--;             //--> pc
-    *stackPtr=0xffffffff; stackPtr--;                                 //--> lr
-    *stackPtr=0; stackPtr--;                                          //--> r12
-    *stackPtr=0; stackPtr--;                                          //--> r3
-    *stackPtr=0; stackPtr--;                                          //--> r2
-    *stackPtr=reinterpret_cast<unsigned long >(argv); stackPtr--;     //--> r1
-    *stackPtr=reinterpret_cast<unsigned long >(pc);                   //--> r0
 
-    ctxsave[0]=reinterpret_cast<unsigned long>(stackPtr);             //--> psp
-    //leaving the content of r4-r11 uninitialized
-    ctxsave[9]=0xfffffffd; //EXC_RETURN=thread mode, use psp, no floating ops
-    //leaving the content of s16-s31 uninitialized*/
+    ctxsave[0]=(unsigned int)pc;
+    ctxsave[1]=(unsigned int)sp;//Initialize the thread's stack pointer
+    ctxsave[2]=0;
+    ctxsave[3]=0;
+    ctxsave[4]=0;
+    ctxsave[5]=0;
+    ctxsave[6]=0;
+    ctxsave[7]=0;
+    ctxsave[8]=0;
+    ctxsave[9]=(unsigned int)pc;
+    ctxsave[10]=(unsigned int)argv;
+    ctxsave[11]=0;
+    ctxsave[12]=0;
+    ctxsave[13]=0;
+    ctxsave[14]=0;
+    ctxsave[15]=0;
+    ctxsave[16]=0;
+    ctxsave[17]=0;
+    ctxsave[18]=0;
+    ctxsave[19]=0;
+    ctxsave[20]=0;
+    ctxsave[21]=0;
+    ctxsave[22]=0;
+    ctxsave[23]=0;
+    ctxsave[24]=0;
+    ctxsave[25]=0;
+    ctxsave[26]=0;
+    ctxsave[27]=0;
+    ctxsave[28]=0;
+    ctxsave[29]=0;
+    ctxsave[30]=0;
+    ctxsave[31]=(unsigned int)&miosix::Thread::threadLauncher; //q0 contains the IRQ return address
+    ctxsave[32]=0;
+
+
 }
 
 #ifdef WITH_PROCESSES
@@ -293,16 +345,45 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
 
 #endif //WITH_PROCESSES
 
+
+
+void tostring(char str[], int num) {
+    int i, rem, len = 0, n;
+    n = num;
+    while (n != 0) {
+        len++;
+        n /= 10; }
+        for (i = 0; i < len; i++) {
+            rem = num % 10;
+            num = num / 10;
+            str[len - (i + 1)] = rem + '0';
+        }
+        str[len] = '\0';
+    }
+
 void IRQportableStartKernel()
 {
-
     //create a temporary space to save current registers. This data is useless
-    //since there's no way to stop the sheduler, but we need to save it anyway.
+    //since there's no way to stop the scheduler, but we need to save it anyway.
     unsigned int s_ctxsave[miosix::CTXSAVE_SIZE];
+
+    IRQbootlog("Setting timer to");
+    char buf[8];
+    tostring(buf, miosix::TIMER_CLOCK/miosix::TICK_FREQ);
+    IRQbootlog(buf);
+
+    picorv32_setq_insn(q3, t6);
+
+    asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
+
+    picorv32_timer_insn(zero, t6);
+
+    picorv32_getq_insn(t6, q3);
     ctxsave=s_ctxsave;//make global ctxsave point to it
     //Note, we can't use enableInterrupts() now since the call is not mathced
     //by a call to disableInterrupts()
     __enable_irq();
+
     miosix::Thread::yield();
     //Never reaches here
 }
@@ -313,51 +394,5 @@ void sleepCpu()
     //__WFI();
 }
 
-#ifdef SCHED_TYPE_CONTROL_BASED
-void AuxiliaryTimer::IRQinit()
-{
-    RCC->APB1ENR|=RCC_APB1ENR_TIM3EN;
-    RCC_SYNC();
-    DBGMCU->APB1FZ|=DBGMCU_APB1_FZ_DBG_TIM3_STOP; //Tim3 stops while debugging
-    TIM3->CR1=0; //Upcounter, not started, no special options
-    TIM3->CR2=0; //No special options
-    TIM3->SMCR=0; //No external trigger
-    TIM3->CNT=0; //Clear timer
-    //get timer frequency considering APB1 prescaler
-    //consider that timer clock is twice APB1 clock when the APB1 prescaler has
-    //a division factor greater than 2
-    int timerClock=SystemCoreClock;
-    int apb1prescaler=(RCC->CFGR>>10) & 7;
-    if(apb1prescaler>4) timerClock>>=(apb1prescaler-4);
-    TIM3->PSC=(timerClock/miosix::AUX_TIMER_CLOCK)-1;
-    TIM3->ARR=0xffff; //Count from zero to 0xffff
-    TIM3->DIER=TIM_DIER_CC1IE; //Enable interrupt on compare
-    TIM3->CCR1=0xffff; //This will be initialized later with setValue
-    NVIC_SetPriority(TIM3_IRQn,3);//High priority for TIM3 (Max=0, min=15)
-    NVIC_EnableIRQ(TIM3_IRQn);
-    TIM3->CR1=TIM_CR1_CEN; //Start timer
-    //This is very important: without this the prescaler shadow register may
-    //not be updated
-    TIM3->EGR=TIM_EGR_UG;
-}
-
-int AuxiliaryTimer::IRQgetValue()
-{
-    return static_cast<int>(TIM3->CNT);
-}
-
-void AuxiliaryTimer::IRQsetValue(int x)
-{
-    TIM3->CR1=0; //Stop timer since changing CNT or CCR1 while running fails
-    TIM3->CNT=0;
-    TIM3->CCR1=static_cast<unsigned short>(std::min(x,0xffff));
-    TIM3->CR1=TIM_CR1_CEN; //Start timer again
-    //The above instructions cause a spurious if not called within the
-    //timer 2 IRQ (This happens if called from an SVC).
-    //Clearing the pending bit prevents this spurious interrupt
-    TIM3->SR=0;
-    NVIC_ClearPendingIRQ(TIM3_IRQn);
-}
-#endif //SCHED_TYPE_CONTROL_BASED
 
 } //namespace miosix_private

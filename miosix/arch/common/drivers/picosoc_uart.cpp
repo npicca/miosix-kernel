@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
+ *   Copyright (C) 2019 by Terraneo Federico                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,66 +25,94 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#include "kernel/logging.h"
-#include "kernel/kernel.h"
-#include "config/miosix_settings.h"
+#include <limits>
+#include <cstring>
+#include <errno.h>
+#include <termios.h>
+#include "picosoc_uart.h"
+#include "kernel/sync.h"
+#include "kernel/scheduler/scheduler.h"
 #include "interfaces/portability.h"
-#include "interfaces/arch_registers.h"
-#include "interrupts.h"
-#include "interfaces-impl/custom_ops.h"
-#include "miosix.h"
+#include "interfaces/gpio.h"
+#include "filesystem/ioctl.h"
 
+using namespace std;
 using namespace miosix;
 
-#ifdef WITH_ERRLOG
+#define reg_uart_clkdiv (*(volatile uint32_t*)0x02000004)
+#define reg_uart_data (*(volatile uint32_t*)0x02000008)
 
-/**
- * \internal
- * Used to print an unsigned int in hexadecimal format, and to reboot the system
- * Note that printf/iprintf cannot be used inside an IRQ, so that's why there's
- * this function.
- * \param x number to print
- */
-static void printUnsignedInt(unsigned int x)
-{
-    static const char hexdigits[]="0123456789abcdef";
-    char result[]="0x........\r\n";
-    for(int i=9;i>=2;i--)
-    {
-        result[i]=hexdigits[x & 0xf];
-        x>>=4;
+
+namespace miosix {
+
+    PicoSoCUART::PicoSoCUART(int baudrate)
+            : Device(Device::STREAM), baudrate(baudrate) {
+        reg_uart_clkdiv = 1000000 / baudrate;
     }
-    IRQerrorLog(result);
+
+    ssize_t PicoSoCUART::readBlock(void *buffer, size_t size, off_t where) {
+
+        Lock<FastMutex> l(useMutex);
+        char *buf = reinterpret_cast<char *>(buffer);
+        FastInterruptDisableLock dLock;
+
+        for(unsigned int i = 0; i < size; i++){
+            buf[i] = readChar();
+        }
+
+        return size;
+
+    }
+
+    ssize_t PicoSoCUART::writeBlock(const void *buffer, size_t size, off_t where)
+    {
+        Lock<FastMutex> l(useMutex);
+        const char *buf=reinterpret_cast<const char*>(buffer);
+        for(size_t i=0;i<size;i++)
+        {
+            PicoSoCUART::writeChar(*buf++);
+        }
+        return size;
+    }
+
+    void PicoSoCUART::IRQwrite(const char *str)
+    {
+        while(*str){
+            writeChar(*str++);
+        }
+        writeChar('\n');
+    }
+
+    char PicoSoCUART::readChar() {
+        int32_t c = -1;
+        uint32_t cycles_begin, cycles_now, cycles;
+        __asm__ volatile ("rdcycle %0" : "=r"(cycles_begin));
+
+        while (c == -1) {
+            __asm__ volatile ("rdcycle %0" : "=r"(cycles_now));
+            cycles = cycles_now - cycles_begin;
+            if (cycles > 12000000) {
+                cycles_begin = cycles_now;
+            }
+            c = reg_uart_data;
+        }
+
+        return c;
+    }
+
+    void PicoSoCUART::writeChar(char c){
+        if(c == '\n')
+            writeChar('\r');
+        reg_uart_data = c;
+    }
+
+
+
+
+
 }
 
-#endif //WITH_ERRLOG
-
-/**
- * \internal
- * \return the program counter of the thread that was running when the exception
- * occurred.
- */
-static unsigned int getProgramCounter()
-{
-    register int reg;
-    picorv32_getq_insn(t6, q0);
-    asm volatile (
-            "add %0, t6, zero"
-            :"=r"(reg));
-    return reg;
-}
-
-void NMI_Handler()
-{
-    IRQerrorLog("\r\n***Unexpected NMI\r\n");
-    miosix_private::IRQsystemReboot();
-}
 
 
-void unexpectedInterrupt()
-{
-    #ifdef WITH_ERRLOG
-    IRQerrorLog("\r\n***Unexpected Peripheral interrupt\r\n");
-    #endif //WITH_ERRLOG
-    miosix_private::IRQsystemReboot();
-}
+
+

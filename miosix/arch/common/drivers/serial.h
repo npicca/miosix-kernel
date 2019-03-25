@@ -10,6 +10,8 @@
 #include "serial_stm32.h"
 #elif defined(_ARCH_CORTEXM3_EFM32GG)
 #include "serial_efm32.h"
+#elif defined(_ARCH_RISCV32IMC_PICORV32)
+#include "picosoc_uart.h"
 #else
 #error "Unknown arch"
 #endif

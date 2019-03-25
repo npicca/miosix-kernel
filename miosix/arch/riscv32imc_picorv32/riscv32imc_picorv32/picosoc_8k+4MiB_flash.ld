@@ -151,6 +151,9 @@ SECTIONS
         *(.data.*)
         *(.gnu.linkonce.d.*)
         . = ALIGN(8);
+        *(.sdata)
+        *(.sdata.*)
+        . = ALIGN(8);
         _edata = .;
     } > ram AT > flash
     _etext = LOADADDR(.data);
@@ -162,14 +165,12 @@ SECTIONS
         *(.bss)
         *(.bss.*)
         *(.gnu.linkonce.b.*)
+        . = ALIGN(8);
+        *(.sbss)
+        *(.sbss.*)
         . = ALIGN(16);
     } > ram
     . = ALIGN(16);
-    .sbss : {
-    *(.sbss)
-    *(.sbss.*)
-    . = ALIGN(16);
-    } > ram
     _bss_end = .;
     . = ALIGN(16);
     _end = .;

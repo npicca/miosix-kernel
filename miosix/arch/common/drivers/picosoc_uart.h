@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
+ *   Copyright (C) 2019 by Terraneo Federico                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,66 +25,39 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#include "kernel/logging.h"
-#include "kernel/kernel.h"
-#include "config/miosix_settings.h"
-#include "interfaces/portability.h"
-#include "interfaces/arch_registers.h"
-#include "interrupts.h"
-#include "interfaces-impl/custom_ops.h"
-#include "miosix.h"
+#ifndef UART_PICOSOC_H
+#define UART_PICOSOC_H
 
-using namespace miosix;
+#include "filesystem/console/console_device.h"
+#include "kernel/sync.h"
+#include "kernel/queue.h"
+#include "board_settings.h"
 
-#ifdef WITH_ERRLOG
-
-/**
- * \internal
- * Used to print an unsigned int in hexadecimal format, and to reboot the system
- * Note that printf/iprintf cannot be used inside an IRQ, so that's why there's
- * this function.
- * \param x number to print
- */
-static void printUnsignedInt(unsigned int x)
-{
-    static const char hexdigits[]="0123456789abcdef";
-    char result[]="0x........\r\n";
-    for(int i=9;i>=2;i--)
+namespace miosix {
+    class PicoSoCUART : public Device
     {
-        result[i]=hexdigits[x & 0xf];
-        x>>=4;
-    }
-    IRQerrorLog(result);
+    public:
+
+        PicoSoCUART(int baudrate);
+
+        ssize_t readBlock(void *buffer, size_t size, off_t where);
+
+        ssize_t writeBlock(const void *buffer, size_t size, off_t where);
+
+        void IRQwrite(const char *str);
+
+    private:
+
+        FastMutex useMutex;                ///< Only one lock because reads and writes happen at the same address
+        int baudrate;                     ///< Baudrate
+
+
+
+        char readChar();
+
+        void writeChar(char c);
+
+    };
+
 }
-
-#endif //WITH_ERRLOG
-
-/**
- * \internal
- * \return the program counter of the thread that was running when the exception
- * occurred.
- */
-static unsigned int getProgramCounter()
-{
-    register int reg;
-    picorv32_getq_insn(t6, q0);
-    asm volatile (
-            "add %0, t6, zero"
-            :"=r"(reg));
-    return reg;
-}
-
-void NMI_Handler()
-{
-    IRQerrorLog("\r\n***Unexpected NMI\r\n");
-    miosix_private::IRQsystemReboot();
-}
-
-
-void unexpectedInterrupt()
-{
-    #ifdef WITH_ERRLOG
-    IRQerrorLog("\r\n***Unexpected Peripheral interrupt\r\n");
-    #endif //WITH_ERRLOG
-    miosix_private::IRQsystemReboot();
-}
+#endif //UART_PICOSOC_H

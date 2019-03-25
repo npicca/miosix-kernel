@@ -32,7 +32,7 @@ void reset_stub(void){
     asm volatile(\
     "j _Z13Reset_Handlerv\n"\
     ".balign 16          \n"\
-    "j _Z13IRQEntrypointv\n"\
+    "j _ZN14miosix_private13IRQEntrypointEv\n"\
     );
 }
 
@@ -40,7 +40,37 @@ void reset_stub(void){
  // TODO: decide where to put SystemInit and NVIC_SystemReset
 void inline SystemInit(void)
 {
-	// TODO: implement SystemInit
+	//since we run on an fpga, it's safer to zero out all registers except for RA(x1), SP (x2),
+    // and FP (x8) which have already been set
+    asm volatile("li x3, 0\n"\
+                 "li x4, 0\n"\
+                 "li x5, 0\n"\
+                 "li x6, 0\n"\
+                 "li x7, 0\n"\
+                 "li x9, 0\n"\
+                 "li x10, 0\n"\
+                 "li x11, 0\n"\
+                 "li x12, 0\n"\
+                 "li x13, 0\n"\
+                 "li x14, 0\n"\
+                 "li x15, 0\n"\
+                 "li x16, 0\n"\
+                 "li x17, 0\n"\
+                 "li x18, 0\n"\
+                 "li x19, 0\n"\
+                 "li x20, 0\n"\
+                 "li x21, 0\n"\
+                 "li x22, 0\n"\
+                 "li x23, 0\n"\
+                 "li x24, 0\n"\
+                 "li x25, 0\n"\
+                 "li x26, 0\n"\
+                 "li x27, 0\n"\
+                 "li x28, 0\n"\
+                 "li x29, 0\n"\
+                 "li x30, 0\n"\
+                 "li x31, 0\n");
+
 }
 
 
@@ -61,15 +91,6 @@ void program_startup()
 	//enables xram, before touching .data and .bss
 	//Third, this is a performance improvement since the loops that initialize
 	//.data and zeros .bss now run with the CPU at full speed instead of 8MHz
-
-    //asm volatile ( \
-            "li t5, 0x200\n"\
-            "li t6, 0x2000\n"\
-            "mem_loop:\n"\
-            "sw zero, 0(t5)\n"\
-            "addi t5, t5, 4\n"\
-            "bne t5, t6, mem_loop\n"\
-            );
 
     SystemInit();
 

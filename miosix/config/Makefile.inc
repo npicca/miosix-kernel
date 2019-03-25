@@ -2294,8 +2294,8 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       ## For now we'll fallback to M4 which is compatible, but does not support
       ## double precision HW floating point
       AFLAGS_BASE   := -march=rv32imc
-      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -fomit-frame-pointer -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
-      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -fomit-frame-pointer -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
+      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
+      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
       LFLAGS_BASE   := -Wl,--gc-sections,-Map,main.map                            \
                        -Wl,-T$(KPATH)/$(LINKER_SCRIPT) $(OPT_EXCEPT)              \
                        $(OPT_OPTIMIZATION) -nostdlib
@@ -2303,10 +2303,11 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       ## Select architecture specific files
       ## These are the files in arch/<arch name>/common
       ARCH_SRC +=                                                           \
+      arch/common/drivers/picosoc_uart.cpp									\
       arch/riscv32imc_picorv32/riscv32imc_picorv32/interfaces-impl/bsp.cpp  \
       $(ARCH_INC)/interfaces-impl/portability.cpp                           \
       $(ARCH_INC)/interfaces-impl/delays.cpp                                \
-      arch/common/core/interrupts_riscv32_picorv32.cpp
+      arch/common/core/interrupts_riscv32_picorv32.cpp                      \
 
 
 ##-----------------------------------------------------------------------------

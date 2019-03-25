@@ -32,8 +32,7 @@ namespace miosix {
 void delayMs(unsigned int mseconds)
 {
     // TODO: Calibrate this delay
-    #warning TODO: Calibrate this delay
-    register const unsigned int count=45000;
+    register const unsigned int count=30000;
 
     for(unsigned int i=0;i<mseconds;i++)
     {
@@ -44,7 +43,7 @@ void delayMs(unsigned int mseconds)
                      "___loop_a_start:                          \n"
                      "             beq  t0, zero, ___loop_a_out \n"
                      "             sub  t0, t0, t1              \n"
-                     "             jal  zero, ___loop_a_start  \n"
+                     "             j           ___loop_a_start  \n"
                      "___loop_a_out:                            \n"::"r"(count):"t0", "t1");
 
     }
@@ -59,7 +58,7 @@ void delayUs(unsigned int useconds)
                  "___loop_b_start:                          \n"
                  "             beq  t0, zero, ___loop_b_out \n"
                  "             sub  t0, t0, t1              \n"
-                 "             jal  zero, ___loop_b_start  \n"
+                 "             jal         ___loop_b_start  \n"
                  "___loop_b_out:                            \n"::"r"(useconds):"t0", "t1");
 }
 
