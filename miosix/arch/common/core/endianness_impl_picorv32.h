@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
+ *   Copyright (C) 2011 by Terraneo Federico                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,51 +25,54 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#include "interfaces-impl/custom_ops.h"
+#ifndef ENDIANNESS_IMPL_H
+#define	ENDIANNESS_IMPL_H
 
-#ifndef INTERRUPTS_H
-#define	INTERRUPTS_H
+#ifndef MIOSIX_BIG_ENDIAN
+//This target is little endian
+#define MIOSIX_LITTLE_ENDIAN
+#endif //MIOSIX_BIG_ENDIAN
+
+#ifdef __cplusplus
+#define __MIOSIX_INLINE inline
+#else //__cplusplus
+#define __MIOSIX_INLINE static inline
+#endif //__cplusplus
 
 
-/**
-  \brief   Enable IRQ Interrupts
-  \details Enables IRQ interrupts by setting the IRQ bitmask to all zeroes
- */
-__attribute__( ( always_inline ) ) static inline void __enable_irq(void)
+__MIOSIX_INLINE unsigned short swapBytes16(unsigned short x)
 {
-    picorv32_maskirq_insn(zero, zero);
+    return (x>>8) | (x<<8);
 }
 
-
-/**
-  \brief   Disable IRQ Interrupts
-  \details Disables IRQ interrupts by setting the IRQ bitmask to all ones
- */
-__attribute__( ( always_inline ) ) static inline void __disable_irq(void)
+__MIOSIX_INLINE unsigned int swapBytes32(unsigned int x)
 {
-    picorv32_setq_insn(q3,t6);
-    asm volatile(
-            "li t6, 0xffffffff \n"
-            );
-    picorv32_maskirq_insn(zero, t6);
-    picorv32_getq_insn(t6,q3);
+#ifdef __GNUC__
+    return __builtin_bswap32(x);
+#else //__GNUC__
+    return ( x>>24)               |
+           ((x<< 8) & 0x00ff0000) |
+           ((x>> 8) & 0x0000ff00) |
+           ( x<<24);
+#endif //__GNUC__
 }
 
-/**
- * Called when an unexpected interrupt occurs.
- * It is called by stage_1_boot.cpp for all weak interrupts not defined.
- */
-void unexpectedInterrupt();
-
-/**
- * Possible kind of faults that the PicoSoc can report.
- */
-// TODO: fill fault type enum for IRQ 3-7
-enum FaultType
+__MIOSIX_INLINE unsigned long long swapBytes64(unsigned long long x)
 {
-    TIMER = 1<<0,     //Timer Interrupt
-    ECALL = 1<<1,     //Process executed an ECALL/EBREAK instruction (or illegal instruction)
-    UF_UNALIGNED=1<<2,//Process attempted unaligned memory access
-};
+#ifdef __GNUC__
+    return __builtin_bswap64(x);
+#else //__GNUC__
+    return ( x>>56)                          |
+           ((x<<40) & 0x00ff000000000000ull) |
+           ((x<<24) & 0x0000ff0000000000ull) |
+           ((x<< 8) & 0x000000ff00000000ull) |
+           ((x>> 8) & 0x00000000ff000000ull) |
+           ((x>>24) & 0x0000000000ff0000ull) |
+           ((x>>40) & 0x000000000000ff00ull) |
+           ( x<<56);
+#endif //__GNUC__
+}
 
-#endif	//INTERRUPTS_H
+#undef __MIOSIX_INLINE
+
+#endif //ENDIANNESS_IMPL_H

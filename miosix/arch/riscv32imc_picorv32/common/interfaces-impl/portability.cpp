@@ -161,10 +161,8 @@ void IRQsystemReboot()
 }
 
 //todo: fix unaligned access
-void IRQEntrypoint() __attribute__((__interrupt__, noreturn, naked));
-void IRQEntrypoint()
-{
-    saveContext();
+void IRQHandler() __attribute__((noinline));
+void IRQHandler(){
 
     register int IRQ_vect, saved_ra;
 
@@ -174,7 +172,17 @@ void IRQEntrypoint()
     picorv32_getq_insn(t5, q1);
     asm volatile("add %0, t5, zero":"=r"(IRQ_vect));
 
+    if(IRQ_vect & (IRQ_vect-1)) { //If IRQ_vect is not a power of 2, more than one bit is set
+        //IRQerrorLog("More than one interrupt!!");
+        //printUnsignedInt(IRQ_vect);
+        //for (;;) {}
+    }
+
+    IRQstackOverflowCheck();
+
     if(IRQ_vect & UF_UNALIGNED){
+
+        IRQerrorLog("MEM ERROR");
 
         /* void* x = malloc(sizeof(int));
          //unaligned memory access!
@@ -200,14 +208,8 @@ void IRQEntrypoint()
         for(;;){}
     }
 
-    if(IRQ_vect & ECALL){
-        IRQstackOverflowCheck();
-        miosix::Scheduler::IRQfindNextThread();
-    }
-
     if(IRQ_vect & TIMER){
-        IRQstackOverflowCheck();
-
+        //IRQerrorLog("TIMER");
         picorv32_setq_insn(q3, t6);
 
         asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
@@ -221,11 +223,18 @@ void IRQEntrypoint()
 
     }
     if(IRQ_vect & 0xfffffff8){
-        IRQbootlog("UNEXPECTED IRQ");
+        IRQerrorLog("UNEXPECTED IRQ");
         //todo: handle better
         for(;;){}
     }
-    restoreContext()
+}
+
+void IRQEntrypoint() __attribute__((naked));
+void IRQEntrypoint()
+{
+    saveContext();
+    IRQHandler();
+    restoreContext();
     picorv32_retirq_insn();
 }
 
@@ -233,7 +242,7 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
         void *argv)
 {
 
-    ctxsave[0]=(unsigned int)pc;
+    ctxsave[0]=0;
     ctxsave[1]=(unsigned int)sp;//Initialize the thread's stack pointer
     ctxsave[2]=0;
     ctxsave[3]=0;

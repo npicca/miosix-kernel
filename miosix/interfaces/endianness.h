@@ -32,6 +32,8 @@
    || defined(_ARCH_CORTEXM3_STM32L1) || defined(_ARCH_CORTEXM7_STM32F7) \
    || defined(_ARCH_CORTEXM7_STM32H7) || defined(_ARCH_CORTEXM3_EFM32GG)
 #include "core/endianness_impl_cortexMx.h"
+#elif defined(_ARCH_RISCV32IMC_PICORV32)
+#include "core/endianness_impl_picorv32.h"
 #else
 #error "No endianness code for this architecture"
 #endif

@@ -192,19 +192,21 @@ inline bool checkAreInterruptsEnabled()
 {
     // PicoRV32 doesn't offer a way to check the value of the IRQ_Mask register without writing to it
     // First we disable all interrupts, and save old value of IRQ_Mask in t6
-    picorv32_setq_insn(q3,t6);
-    asm volatile(
-    "li t6, 0xffffffff"
-    );
-    picorv32_maskirq_insn(t6,t6);
-
-    //Then we set IRQ_Mask as it was before, to avoid issues
-    picorv32_maskirq_insn(t6, zero);
-
     register int i;
 
+    picorv32_setq_insn(q3,t6);
+    asm volatile("li t6, 0xffffffff");
+    picorv32_maskirq_insn(t6,t6);
+
     asm volatile("add %0,t6, zero":"=r"(i));
-    picorv32_getq_insn(t6,q0);
+
+    //Then we set IRQ_Mask as it was before, to avoid issues
+    picorv32_maskirq_insn(zero, t6);
+
+
+
+
+    picorv32_getq_insn(t6,q3);
     return (i == 0);
 }
 

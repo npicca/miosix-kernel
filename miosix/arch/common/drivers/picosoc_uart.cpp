@@ -56,17 +56,20 @@ namespace miosix {
         char *buf = reinterpret_cast<char *>(buffer);
         FastInterruptDisableLock dLock;
 
-        for(unsigned int i = 0; i < size; i++){
+        /*for(unsigned int i = 0; i < size; i++){
             buf[i] = readChar();
         }
 
-        return size;
+        return size;*/ //todo: indaga con terraneo perche' chiede 256 byte
+        buf[0] = readChar();
+        return 1;
 
     }
 
     ssize_t PicoSoCUART::writeBlock(const void *buffer, size_t size, off_t where)
     {
         Lock<FastMutex> l(useMutex);
+        FastInterruptDisableLock dLock;
         const char *buf=reinterpret_cast<const char*>(buffer);
         for(size_t i=0;i<size;i++)
         {
@@ -96,7 +99,6 @@ namespace miosix {
             }
             c = reg_uart_data;
         }
-
         return c;
     }
 
