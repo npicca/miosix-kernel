@@ -114,13 +114,15 @@ void program_startup()
 	_init();
 
 	//If main returns, reboot
-	asm volatile ("j _Z15program_startupv");
+	asm volatile("j _Z13Reset_Handlerv");
+
+	for(;;){};
 }
 
 /**
  * Reset handler, called by hardware immediately after reset
  */
-void Reset_Handler() __attribute__((__interrupt__, noreturn, naked));
+void Reset_Handler() __attribute__((noreturn, naked));
 void Reset_Handler()
 {
     asm volatile("la sp,  _heap_end");

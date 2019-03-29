@@ -38,7 +38,7 @@ _main_stack_size = 0x00000200;                     /* main stack = 512Bytes */
 _main_stack_top  = 0x0 + _main_stack_size;
 ASSERT(_main_stack_size   % 8 == 0, "MAIN stack size error");
 
-_heap_end = 0x2000;                            /* end of available ram  */
+_heap_end = 0x3000;                            /* end of available ram  */
 
 /* identify the Entry Point  */
 ENTRY(_Z13Reset_Handlerv)
@@ -52,7 +52,7 @@ MEMORY
      * Note, the ram starts at 0x0 but it is necessary to add the size
      * of the main stack, so it is 0x20000200.
      */
-    ram(wx)     : ORIGIN = 0x200, LENGTH =  8K-_main_stack_size
+    ram(wx)     : ORIGIN = 0x200, LENGTH =  12K - _main_stack_size
 }
 
 /* now define the output sections  */
@@ -71,14 +71,10 @@ SECTIONS
         *(.text)
         *(.text.*)
         *(.gnu.linkonce.t.*)
-        /* these sections for thumb interwork?
-        *(.glue_7)
-        *(.glue_7t)
-        */
+
         /* these sections for C++? */
         *(.gcc_except_table)
         *(.gcc_except_table.*)
-        *(.ARM.extab*)
         *(.gnu.linkonce.armextab.*)
 
         . = ALIGN(4);
@@ -133,14 +129,8 @@ SECTIONS
         KEEP (*crtend.o(.dtors))
     } > flash
 
-    /* .ARM.exidx is sorted, so has to go in its own output section.
-    __exidx_start = .;
-    .ARM.exidx :
-    {
-        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > flash
-    __exidx_end = .;
-    */
+
+
 
 	/* .data section: global variables go to ram, but also store a copy to
        flash to initialize them */
@@ -153,26 +143,23 @@ SECTIONS
         . = ALIGN(8);
         *(.sdata)
         *(.sdata.*)
-        . = ALIGN(8);
         _edata = .;
     } > ram AT > flash
     _etext = LOADADDR(.data);
     . = ALIGN(16);
+
     /* .bss section: uninitialized global variables go to ram */
-    _bss_start = .;
-    .bss :
-    {
+        .bss :
+        {
+         _bss_start = .;
         *(.bss)
         *(.bss.*)
         *(.gnu.linkonce.b.*)
         . = ALIGN(8);
         *(.sbss)
         *(.sbss.*)
-        . = ALIGN(16);
     } > ram
-    . = ALIGN(16);
     _bss_end = .;
-    . = ALIGN(16);
     _end = .;
     PROVIDE(end = .);
 }

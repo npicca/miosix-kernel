@@ -57,6 +57,22 @@ void SysTick_Handler()
     restoreContext();
 }
 
+
+void tostring(char str[], int num) {
+    int i, rem, len = 0, n;
+    n = num;
+    while (n != 0) {
+        len++;
+        n /= 10; }
+    for (i = 0; i < len; i++) {
+        rem = num % 10;
+        num = num / 10;
+        str[len - (i + 1)] = rem + '0';
+    }
+    str[len] = '\0';
+}
+
+
 /**
  * \internal
  * software interrupt routine.
@@ -161,10 +177,8 @@ void IRQsystemReboot()
 }
 
 //todo: fix unaligned access
-void IRQEntrypoint() __attribute__((__interrupt__, noreturn, naked));
-void IRQEntrypoint()
-{
-    saveContext();
+void IRQHandler() __attribute__((noinline));
+void IRQHandler(){
 
     register int IRQ_vect, saved_ra;
 
@@ -174,7 +188,15 @@ void IRQEntrypoint()
     picorv32_getq_insn(t5, q1);
     asm volatile("add %0, t5, zero":"=r"(IRQ_vect));
 
+    IRQstackOverflowCheck();
+
     if(IRQ_vect & UF_UNALIGNED){
+
+        IRQerrorLog("MEM ERROR");
+
+        char buf[8];
+        tostring(buf, saved_ra);
+        IRQbootlog(buf);
 
         /* void* x = malloc(sizeof(int));
          //unaligned memory access!
@@ -200,32 +222,39 @@ void IRQEntrypoint()
         for(;;){}
     }
 
-    if(IRQ_vect & ECALL){
-        IRQstackOverflowCheck();
-        miosix::Scheduler::IRQfindNextThread();
-    }
-
     if(IRQ_vect & TIMER){
-        IRQstackOverflowCheck();
-
-        picorv32_setq_insn(q3, t6);
-
-        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
-
-        picorv32_timer_insn(zero, t6);
-
-        picorv32_getq_insn(t6, q3);
+        //IRQerrorLog("TIMER");
 
         miosix::IRQtickInterrupt();
+
+
+        picorv32_setq_insn(q3, t6);
+        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
+        picorv32_timer_insn(zero, t6);
+        picorv32_getq_insn(t6, q3);
+
         if(miosix::kernel_running!=0) miosix::tick_skew=true;
 
     }
+    
+    else if(IRQ_vect & ECALL){ //we don't want a double context switch caused by tick+ecall
+
+        miosix::Scheduler::IRQfindNextThread();
+    }
+
     if(IRQ_vect & 0xfffffff8){
-        IRQbootlog("UNEXPECTED IRQ");
+        IRQerrorLog("UNEXPECTED IRQ");
         //todo: handle better
         for(;;){}
     }
-    restoreContext()
+}
+
+void IRQEntrypoint() __attribute__((naked));
+void IRQEntrypoint()
+{
+    saveContext();
+    IRQHandler();
+    restoreContext();
     picorv32_retirq_insn();
 }
 
@@ -233,7 +262,7 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
         void *argv)
 {
 
-    ctxsave[0]=(unsigned int)pc;
+    ctxsave[0]=0;
     ctxsave[1]=(unsigned int)sp;//Initialize the thread's stack pointer
     ctxsave[2]=0;
     ctxsave[3]=0;
@@ -347,19 +376,6 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
 
 
 
-void tostring(char str[], int num) {
-    int i, rem, len = 0, n;
-    n = num;
-    while (n != 0) {
-        len++;
-        n /= 10; }
-        for (i = 0; i < len; i++) {
-            rem = num % 10;
-            num = num / 10;
-            str[len - (i + 1)] = rem + '0';
-        }
-        str[len] = '\0';
-    }
 
 void IRQportableStartKernel()
 {

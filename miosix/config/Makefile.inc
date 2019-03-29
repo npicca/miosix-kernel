@@ -2303,6 +2303,7 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       ## Select architecture specific files
       ## These are the files in arch/<arch name>/common
       ARCH_SRC +=                                                           \
+      arch/common/core/interrupts_riscv32_picorv32.cpp                      \
       arch/common/drivers/picosoc_uart.cpp									\
       arch/riscv32imc_picorv32/riscv32imc_picorv32/interfaces-impl/bsp.cpp  \
       $(ARCH_INC)/interfaces-impl/portability.cpp                           \

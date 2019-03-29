@@ -128,12 +128,11 @@ extern volatile unsigned int *ctxsave;
     asm volatile(                                                              \
             "la t0, ctxsave                       \n"                          \
             "lw t0, 0(t0)                         \n"                          \
-                                                                               \
             "lw ra,  0*4+0(t0)                    \n"                          \
             "lw sp,  1*4+0(t0)                    \n"                          \
             "lw gp,  2*4+0(t0)                    \n"                          \
             "lw tp,  3*4+0(t0)                    \n"                          \
-            /* not t0  for now */                                              \
+            /* not t0 for now */                                              \
             /* not t1 for now */                                               \
             "lw t2,  6*4+0(t0)                    \n"                          \
             "lw s0,  7*4+0(t0)                    \n"                          \
@@ -199,19 +198,18 @@ inline bool checkAreInterruptsEnabled()
 {
     // PicoRV32 doesn't offer a way to check the value of the IRQ_Mask register without writing to it
     // First we disable all interrupts, and save old value of IRQ_Mask in t6
-    picorv32_setq_insn(q3,t6);
-    asm volatile(
-    "li t6, 0xffffffff"
-    );
-    picorv32_maskirq_insn(t6,t6);
-
-    //Then we set IRQ_Mask as it was before, to avoid issues
-    picorv32_maskirq_insn(t6, zero);
-
     register int i;
 
+    picorv32_setq_insn(q3,t6);
+    asm volatile("li t6, 0xffffffff");
+    picorv32_maskirq_insn(t6,t6);
+
     asm volatile("add %0,t6, zero":"=r"(i));
-    picorv32_getq_insn(t6,q0);
+
+    //Then we set IRQ_Mask as it was before, to avoid issues
+    picorv32_maskirq_insn(zero, t6);
+
+    picorv32_getq_insn(t6,q3);
     return (i == 0);
 }
 
