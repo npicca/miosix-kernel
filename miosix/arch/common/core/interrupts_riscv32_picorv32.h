@@ -52,8 +52,8 @@ __attribute__( ( always_inline ) ) static inline void __disable_irq(void)
     asm volatile(
             "li t6, 0xffffffff \n"
             );
+    picorv32_maskirq_insn(zero, t6);
     picorv32_getq_insn(t6,q3);
-    picorv32_maskirq_insn(t6,zero);
 }
 
 /**
