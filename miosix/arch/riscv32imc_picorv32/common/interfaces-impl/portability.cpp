@@ -57,6 +57,22 @@ void SysTick_Handler()
     restoreContext();
 }
 
+
+void tostring(char str[], int num) {
+    int i, rem, len = 0, n;
+    n = num;
+    while (n != 0) {
+        len++;
+        n /= 10; }
+    for (i = 0; i < len; i++) {
+        rem = num % 10;
+        num = num / 10;
+        str[len - (i + 1)] = rem + '0';
+    }
+    str[len] = '\0';
+}
+
+
 /**
  * \internal
  * software interrupt routine.
@@ -172,17 +188,15 @@ void IRQHandler(){
     picorv32_getq_insn(t5, q1);
     asm volatile("add %0, t5, zero":"=r"(IRQ_vect));
 
-    if(IRQ_vect & (IRQ_vect-1)) { //If IRQ_vect is not a power of 2, more than one bit is set
-        //IRQerrorLog("More than one interrupt!!");
-        //printUnsignedInt(IRQ_vect);
-        //for (;;) {}
-    }
-
     IRQstackOverflowCheck();
 
     if(IRQ_vect & UF_UNALIGNED){
 
         IRQerrorLog("MEM ERROR");
+
+        char buf[8];
+        tostring(buf, saved_ra);
+        IRQbootlog(buf);
 
         /* void* x = malloc(sizeof(int));
          //unaligned memory access!
@@ -210,18 +224,24 @@ void IRQHandler(){
 
     if(IRQ_vect & TIMER){
         //IRQerrorLog("TIMER");
-        picorv32_setq_insn(q3, t6);
-
-        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
-
-        picorv32_timer_insn(zero, t6);
-
-        picorv32_getq_insn(t6, q3);
 
         miosix::IRQtickInterrupt();
+
+
+        picorv32_setq_insn(q3, t6);
+        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
+        picorv32_timer_insn(zero, t6);
+        picorv32_getq_insn(t6, q3);
+
         if(miosix::kernel_running!=0) miosix::tick_skew=true;
 
     }
+    
+    else if(IRQ_vect & ECALL){ //we don't want a double context switch caused by tick+ecall
+
+        miosix::Scheduler::IRQfindNextThread();
+    }
+
     if(IRQ_vect & 0xfffffff8){
         IRQerrorLog("UNEXPECTED IRQ");
         //todo: handle better
@@ -356,19 +376,6 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
 
 
 
-void tostring(char str[], int num) {
-    int i, rem, len = 0, n;
-    n = num;
-    while (n != 0) {
-        len++;
-        n /= 10; }
-        for (i = 0; i < len; i++) {
-            rem = num % 10;
-            num = num / 10;
-            str[len - (i + 1)] = rem + '0';
-        }
-        str[len] = '\0';
-    }
 
 void IRQportableStartKernel()
 {

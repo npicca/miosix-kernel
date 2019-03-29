@@ -107,7 +107,7 @@ extern volatile unsigned int *ctxsave;
     asm volatile("sw t1, 31*4+0(t0)");                                        \
     picorv32_getq_insn(t1,q1);                                                \
     asm volatile("sw t1, 32*4+0(t0)");                                        \
-    picorv32_getq_insn(t6,q2);                                                \
+    picorv32_getq_insn(t6,q2); /*save q2 (containing old value of t0) to t6 */ \
     asm volatile("sw t6, 4*4+0(t0)");                                         \
 }
 
