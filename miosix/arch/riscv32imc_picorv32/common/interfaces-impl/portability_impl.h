@@ -68,8 +68,9 @@ extern volatile unsigned int *ctxsave;
 #define saveContext()                                                          \
 {                                                                              \
     picorv32_setq_insn(q2, t0); /* save t0 to q2 */                            \
+    picorv32_setq_insn(q3, t1); /* save t1 to q3 */                            \
     asm volatile(                                                              \
-            "la t0,  ctxsave                        \n"                         \
+            "la t0,  ctxsave                       \n"                         \
             "lw t0, 0(t0)                          \n"                         \
             "sw ra,   0*4+0(t0)                    \n"                         \
             "sw sp,   1*4+0(t0)                    \n"                         \
@@ -80,35 +81,40 @@ extern volatile unsigned int *ctxsave;
             "sw t2,   6*4+0(t0)                    \n"                         \
             "sw s0,   7*4+0(t0)                    \n"                         \
             "sw s1,   8*4+0(t0)                    \n"                         \
-            "sw a0,  9*4+0(t0)                    \n"                         \
-            "sw a1, 10*4+0(t0)                    \n"                         \
-            "sw a2, 11*4+0(t0)                    \n"                         \
-            "sw a3, 12*4+0(t0)                    \n"                         \
-            "sw a4, 13*4+0(t0)                    \n"                         \
-            "sw a5, 14*4+0(t0)                    \n"                         \
-            "sw a6, 15*4+0(t0)                    \n"                         \
-            "sw a7, 16*4+0(t0)                    \n"                         \
-            "sw s2, 17*4+0(t0)                    \n"                         \
-            "sw s3, 18*4+0(t0)                    \n"                         \
-            "sw s4, 19*4+0(t0)                    \n"                         \
-            "sw s5, 20*4+0(t0)                    \n"                         \
-            "sw s6, 21*4+0(t0)                    \n"                         \
-            "sw s7, 22*4+0(t0)                    \n"                         \
-            "sw s8, 23*4+0(t0)                    \n"                         \
-            "sw s9, 24*4+0(t0)                    \n"                         \
+            "sw a0,  9*4+0(t0)                     \n"                         \
+            "sw a1, 10*4+0(t0)                     \n"                         \
+            "sw a2, 11*4+0(t0)                     \n"                         \
+            "sw a3, 12*4+0(t0)                     \n"                         \
+            "sw a4, 13*4+0(t0)                     \n"                         \
+            "sw a5, 14*4+0(t0)                     \n"                         \
+            "sw a6, 15*4+0(t0)                     \n"                         \
+            "sw a7, 16*4+0(t0)                     \n"                         \
+            "sw s2, 17*4+0(t0)                     \n"                         \
+            "sw s3, 18*4+0(t0)                     \n"                         \
+            "sw s4, 19*4+0(t0)                     \n"                         \
+            "sw s5, 20*4+0(t0)                     \n"                         \
+            "sw s6, 21*4+0(t0)                     \n"                         \
+            "sw s7, 22*4+0(t0)                     \n"                         \
+            "sw s8, 23*4+0(t0)                     \n"                         \
+            "sw s9, 24*4+0(t0)                     \n"                         \
             "sw s10, 25*4+0(t0)                    \n"                         \
             "sw s11, 26*4+0(t0)                    \n"                         \
-            "sw t3, 27*4+0(t0)                    \n"                         \
-            "sw t4, 28*4+0(t0)                    \n"                         \
-            "sw t5, 29*4+0(t0)                    \n"                         \
-            "sw t6, 30*4+0(t0)                    \n"                         \
-    );                                                                        \
-    picorv32_getq_insn(t1,q0);                                                \
-    asm volatile("sw t1, 31*4+0(t0)");                                        \
-    picorv32_getq_insn(t1,q1);                                                \
-    asm volatile("sw t1, 32*4+0(t0)");                                        \
-    picorv32_getq_insn(t6,q2);                                                \
-    asm volatile("sw t6, 4*4+0(t0)");                                         \
+            "sw t3, 27*4+0(t0)                     \n"                         \
+            "sw t4, 28*4+0(t0)                     \n"                         \
+            "sw t5, 29*4+0(t0)                     \n"                         \
+            "sw t6, 30*4+0(t0)                     \n"                         \
+    );                                                                         \
+    /* Save q0 and q1 */                                                       \
+    picorv32_getq_insn(t1, q0);                                                \
+    asm volatile("sw t1, 31*4+0(t0)");                                         \
+    picorv32_getq_insn(t1, q1);                                                \
+    asm volatile("sw t1, 32*4+0(t0)");                                         \
+    /* Save original t0 value */                                               \
+    picorv32_getq_insn(t1,q2);                                                 \
+    asm volatile("sw t1, 4*4+0(t0)");                                          \
+    /* Restore t0 and t1 */                                                    \
+    picorv32_getq_insn(t0,q2);                                                 \
+    picorv32_getq_insn(t1,q3);                                                 \
 }
 
 /**
@@ -120,44 +126,45 @@ extern volatile unsigned int *ctxsave;
 #define restoreContext()                                                       \
 {                                                                              \
     asm volatile(                                                              \
-            "la t0, ctxsave                        \n"                         \
-            "lw t0, 0(t0)                          \n"                         \
-            "lw ra,  0*4+0(t0)                    \n"                         \
-            "lw sp,  1*4+0(t0)                    \n"                         \
-            "lw gp,  2*4+0(t0)                    \n"                         \
-            "lw tp,  3*4+0(t0)                    \n"                         \
-            /* not t0  for now */                                               \
+            "la t0, ctxsave                       \n"                          \
+            "lw t0, 0(t0)                         \n"                          \
+                                                                               \
+            "lw ra,  0*4+0(t0)                    \n"                          \
+            "lw sp,  1*4+0(t0)                    \n"                          \
+            "lw gp,  2*4+0(t0)                    \n"                          \
+            "lw tp,  3*4+0(t0)                    \n"                          \
+            /* not t0  for now */                                              \
             /* not t1 for now */                                               \
-            "lw t2,  6*4+0(t0)                    \n"                         \
-            "lw s0,  7*4+0(t0)                    \n"                         \
-            "lw s1,  8*4+0(t0)                    \n"                         \
-            "lw a0,  9*4+0(t0)                    \n"                         \
-            "lw a1, 10*4+0(t0)                    \n"                         \
-            "lw a2, 11*4+0(t0)                    \n"                         \
-            "lw a3, 12*4+0(t0)                    \n"                         \
-            "lw a4, 13*4+0(t0)                    \n"                         \
-            "lw a5, 14*4+0(t0)                    \n"                         \
-            "lw a6, 15*4+0(t0)                    \n"                         \
-            "lw a7, 16*4+0(t0)                    \n"                         \
-            "lw s2, 17*4+0(t0)                    \n"                         \
-            "lw s3, 18*4+0(t0)                    \n"                         \
-            "lw s4, 19*4+0(t0)                    \n"                         \
-            "lw s5, 20*4+0(t0)                    \n"                         \
-            "lw s6, 21*4+0(t0)                    \n"                         \
-            "lw s7, 22*4+0(t0)                    \n"                         \
-            "lw s8, 23*4+0(t0)                    \n"                         \
-            "lw s9, 24*4+0(t0)                    \n"                         \
-            "lw s10, 25*4+0(t0)                    \n"                         \
-            "lw s11, 26*4+0(t0)                    \n"                         \
-            "lw t3, 27*4+0(t0)                    \n"                         \
-            "lw t4, 28*4+0(t0)                    \n"                         \
-            "lw t5, 29*4+0(t0)                    \n"                         \
+            "lw t2,  6*4+0(t0)                    \n"                          \
+            "lw s0,  7*4+0(t0)                    \n"                          \
+            "lw s1,  8*4+0(t0)                    \n"                          \
+            "lw a0,  9*4+0(t0)                    \n"                          \
+            "lw a1, 10*4+0(t0)                    \n"                          \
+            "lw a2, 11*4+0(t0)                    \n"                          \
+            "lw a3, 12*4+0(t0)                    \n"                          \
+            "lw a4, 13*4+0(t0)                    \n"                          \
+            "lw a5, 14*4+0(t0)                    \n"                          \
+            "lw a6, 15*4+0(t0)                    \n"                          \
+            "lw a7, 16*4+0(t0)                    \n"                          \
+            "lw s2, 17*4+0(t0)                    \n"                          \
+            "lw s3, 18*4+0(t0)                    \n"                          \
+            "lw s4, 19*4+0(t0)                    \n"                          \
+            "lw s5, 20*4+0(t0)                    \n"                          \
+            "lw s6, 21*4+0(t0)                    \n"                          \
+            "lw s7, 22*4+0(t0)                    \n"                          \
+            "lw s8, 23*4+0(t0)                    \n"                          \
+            "lw s9, 24*4+0(t0)                    \n"                          \
+            "lw s10, 25*4+0(t0)                   \n"                          \
+            "lw s11, 26*4+0(t0)                   \n"                          \
+            "lw t3, 27*4+0(t0)                    \n"                          \
+            "lw t4, 28*4+0(t0)                    \n"                          \
+            "lw t5, 29*4+0(t0)                    \n"                          \
             "lw t6, 30*4+0(t0)                    \n"                         ); \
-    asm volatile ("lw t1, 31*4+0(t0)");                                       \
-    picorv32_setq_insn(q0,t1);                                                \
-    asm volatile ("lw t1, 32*4+0(t0)");                                       \
+    asm volatile ("lw t1, 31*4+0(t0)");                                        \
+    picorv32_setq_insn(q0,t1);                                                 \
+    asm volatile ("lw t1, 32*4+0(t0)");                                        \
     picorv32_setq_insn(q1, t1);                                                \
-    asm volatile("lw t1, 5*4+0(t0)\n"                                           \
+    asm volatile("lw t1, 5*4+0(t0)\n"                                          \
                  "lw t0, 4*4+0(t0)\n");                                        \
 }
 
