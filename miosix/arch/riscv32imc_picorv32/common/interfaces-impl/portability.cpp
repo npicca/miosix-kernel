@@ -161,7 +161,6 @@ void IRQstackOverflowCheck()
     {
         if(miosix::cur->watermark[i]!=miosix::WATERMARK_FILL){
             miosix::errorHandler(miosix::STACK_OVERFLOW);
-
         }
     }
 
@@ -224,14 +223,12 @@ void IRQHandler(){
 
     if(IRQ_vect & TIMER){
         //IRQerrorLog("TIMER");
-
-        miosix::IRQtickInterrupt();
-
-
         picorv32_setq_insn(q3, t6);
         asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
         picorv32_timer_insn(zero, t6);
         picorv32_getq_insn(t6, q3);
+
+        miosix::IRQtickInterrupt();
 
         if(miosix::kernel_running!=0) miosix::tick_skew=true;
 

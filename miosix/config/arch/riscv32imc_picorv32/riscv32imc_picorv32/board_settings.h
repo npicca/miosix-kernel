@@ -50,10 +50,10 @@ const unsigned int MAIN_STACK_SIZE=1024+512;
 
 /// Frequency of tick (in Hz). 
 /// For the priority scheduler this is also the context switch frequency
-const unsigned int TICK_FREQ=1000;
+const unsigned int TICK_FREQ=100;
 
 /// \internal Clock frequency of hardware timer, hardware specific data
-const unsigned int TIMER_CLOCK=30000000;
+const unsigned int TIMER_CLOCK=12000000;
 
 
 ///\internal Aux timer run @ 100KHz

@@ -32,7 +32,7 @@ namespace miosix {
 void delayMs(unsigned int mseconds)
 {
     // TODO: Calibrate this delay
-    register const unsigned int count=30000;
+    register const unsigned int count=42;
 
     for(unsigned int i=0;i<mseconds;i++)
     {
@@ -53,12 +53,13 @@ void delayUs(unsigned int useconds)
 {
     // This delay has been calibrated to take x microseconds
     // It is written in assembler to be independent on compiler optimization
+    useconds /= 24;
     asm volatile("             add  t0, zero, %0            \n"
                  "             addi t1, zero, 1             \n"
                  "___loop_b_start:                          \n"
                  "             beq  t0, zero, ___loop_b_out \n"
                  "             sub  t0, t0, t1              \n"
-                 "             jal         ___loop_b_start  \n"
+                 "             j    ___loop_b_start         \n"
                  "___loop_b_out:                            \n"::"r"(useconds):"t0", "t1");
 }
 
