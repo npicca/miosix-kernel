@@ -66,16 +66,9 @@ SECTIONS
     /* .text section: code goes to flash */
     .text :
     {
-        /* Startup code must go at address 0 */
-        /* KEEP(*(.isr_vector)) */
         *(.text)
         *(.text.*)
         *(.gnu.linkonce.t.*)
-
-        /* these sections for C++? */
-        *(.gcc_except_table)
-        *(.gcc_except_table.*)
-        *(.gnu.linkonce.armextab.*)
 
         . = ALIGN(4);
         /* .rodata: constant data */
@@ -83,7 +76,7 @@ SECTIONS
         *(.rodata.*)
         *(.gnu.linkonce.r.*)
 
-        /* C++ Static constructors/destructors (eabi) */
+        /* C++ Static constructors/destructors */
         . = ALIGN(4);
         KEEP(*(.init))
 
@@ -127,24 +120,42 @@ SECTIONS
         KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*crtend.o(.dtors))
+
     } > flash
 
+	.gcc_except_table : ALIGN(4)
+	{
+        KEEP(*(.gcc_except_table))
+        KEEP(*(.gcc_except_table.*))
+	} > flash
 
+	.eh_frame : ALIGN(4)
+	{
+        KEEP(*(.eh_frame))
+        KEEP(*(.eh_frame.*))
+	} > flash
+
+	.eh_frame_hdr : ALIGN(4)
+	{
+		KEEP(*(.eh_frame_hdr))
+		KEEP(*(.eh_frame_hdr.*))
+	}
 
 
 	/* .data section: global variables go to ram, but also store a copy to
        flash to initialize them */
-    .data : ALIGN(8)
+    .data : ALIGN(4)
     {
         _data = .;
         *(.data)
         *(.data.*)
         *(.gnu.linkonce.d.*)
-        . = ALIGN(8);
+        . = ALIGN(4);
         *(.sdata)
         *(.sdata.*)
         _edata = .;
     } > ram AT > flash
+
     _etext = LOADADDR(.data);
     . = ALIGN(16);
 
@@ -155,11 +166,13 @@ SECTIONS
         *(.bss)
         *(.bss.*)
         *(.gnu.linkonce.b.*)
-        . = ALIGN(8);
+        . = ALIGN(4);
         *(.sbss)
         *(.sbss.*)
     } > ram
+
     _bss_end = .;
+
     _end = .;
     PROVIDE(end = .);
 }

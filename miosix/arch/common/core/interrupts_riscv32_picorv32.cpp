@@ -74,13 +74,6 @@ static unsigned int getProgramCounter()
     return reg;
 }
 
-void NMI_Handler()
-{
-    IRQerrorLog("\r\n***Unexpected NMI\r\n");
-    miosix_private::IRQsystemReboot();
-}
-
-
 void unexpectedInterrupt()
 {
     #ifdef WITH_ERRLOG

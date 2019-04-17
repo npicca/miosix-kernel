@@ -86,10 +86,10 @@ inline void *atomicFetchAndIncrement(void * const volatile * p, int offset,
 {
     InterruptDisableLock dLock;
     volatile uint32_t *pt;
-    
+
     void *result = *p;
     if(result == 0) return 0;
-    pt = reinterpret_cast<uint32_t*>(result) + offset;
+    pt = (uint32_t*)(result) + offset;
     *pt += incr;
     return result;
 }

@@ -635,9 +635,9 @@ endif
 ## Then, initialize C/C++ flags
 ##
 CFLAGS_BASE   := -D_MIOSIX_BOARDNAME=\"$(OPT_BOARD)\" \
-                 -ffunction-sections -Wno-unused-but-set-variable -Wall -g
+                 -ffunction-sections -Wall -Wno-unused-but-set-variable
 CXXFLAGS_BASE := -D_MIOSIX_BOARDNAME=\"$(OPT_BOARD)\" -std=gnu++11 \
-                 -ffunction-sections -Wno-unused-but-set-variable -Wall -g
+                 -ffunction-sections -Wall -Wno-unused-but-set-variable
 
 ##
 ## Now two big switch-like constructs nested. The first lists all possible

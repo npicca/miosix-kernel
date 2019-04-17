@@ -45,16 +45,16 @@ namespace miosix {
 
 /// Size of stack for main().
 /// The C standard library is stack-heavy (iprintf requires 1KB) but the
-/// picosoc we synthetize only has 8KB of RAM so the stack is only 1.5KB.
-const unsigned int MAIN_STACK_SIZE=1024+512;
+/// picosoc we synthetize only has 12KB of RAM so the stack is only 2KB.
+const unsigned int MAIN_STACK_SIZE=2048;
 
 /// Frequency of tick (in Hz). 
 /// For the priority scheduler this is also the context switch frequency
-const unsigned int TICK_FREQ=100;
+const unsigned int TICK_FREQ=500;
 
 /// \internal Clock frequency of hardware timer, hardware specific data
-const unsigned int TIMER_CLOCK=12000000;
-
+//const unsigned int TIMER_CLOCK=12000000;
+const unsigned int TIMER_CLOCK=22125000;
 
 ///\internal Aux timer run @ 100KHz
 ///Note that since the timer is only 16 bits this imposes a limit on the
@@ -65,7 +65,7 @@ const unsigned int AUX_TIMER_CLOCK=100000;
 const unsigned int AUX_TIMER_MAX=0xffff; ///<\internal Aux timer is 16 bits
 
 /// Serial port
-const unsigned int defaultSerialSpeed=9600;
+const unsigned int defaultSerialSpeed=115200;
 const bool defaultSerialFlowctrl=false;
 
 /**

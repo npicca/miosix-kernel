@@ -36,9 +36,9 @@ namespace miosix {
  */
 
 /// \internal size of vector to store registers during ctx switch
-/// ((33)*4=124Bytes). All standard registers are saved during ctx switch (except register 0 of course),
-/// plus q0 and q1.
-const unsigned char CTXSAVE_SIZE=33;
+/// ((32)*4=124Bytes). All 31 standard registers are saved during ctx switch (except register 0 of course),
+/// plus q0.
+const unsigned char CTXSAVE_SIZE=32;
 
 /// \internal some architectures save part of the context on their stack.
 /// ((8+17)*4=100Bytes). This constant is used to increase the stack size by

@@ -104,14 +104,12 @@ extern volatile unsigned int *ctxsave;
             "sw t5, 29*4+0(t0)                     \n"                         \
             "sw t6, 30*4+0(t0)                     \n"                         \
     );                                                                         \
-    /* Save q0 and q1 */                                                       \
+    /* Save q0 */                                                              \
     picorv32_getq_insn(t1, q0);                                                \
-    asm volatile("sw t1, 31*4+0(t0)");                                         \
-    picorv32_getq_insn(t1, q1);                                                \
-    asm volatile("sw t1, 32*4+0(t0)");                                         \
+    asm volatile("sw t1, 31*4+0(t0)":::"t1");                                  \
     /* Save original t0 value */                                               \
     picorv32_getq_insn(t1,q2);                                                 \
-    asm volatile("sw t1, 4*4+0(t0)");                                          \
+    asm volatile("sw t1, 4*4+0(t0)":::"t1");                                   \
     /* Restore t0 and t1 */                                                    \
     picorv32_getq_insn(t0,q2);                                                 \
     picorv32_getq_insn(t1,q3);                                                 \
@@ -161,8 +159,6 @@ extern volatile unsigned int *ctxsave;
             "lw t6, 30*4+0(t0)                    \n"                         ); \
     asm volatile ("lw t1, 31*4+0(t0)");                                        \
     picorv32_setq_insn(q0,t1);                                                 \
-    asm volatile ("lw t1, 32*4+0(t0)");                                        \
-    picorv32_setq_insn(q1, t1);                                                \
     asm volatile("lw t1, 5*4+0(t0)\n"                                          \
                  "lw t0, 4*4+0(t0)\n");                                        \
 }
@@ -193,6 +189,8 @@ inline void doEnableInterrupts()
 {
     __enable_irq();
 }
+
+
 
 inline bool checkAreInterruptsEnabled()
 {

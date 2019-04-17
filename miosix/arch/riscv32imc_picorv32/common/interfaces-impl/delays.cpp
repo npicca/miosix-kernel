@@ -31,8 +31,7 @@ namespace miosix {
 
 void delayMs(unsigned int mseconds)
 {
-    // TODO: Calibrate this delay
-    register const unsigned int count=42;
+    register const unsigned int count=42*2;//todo:ricalibra;
 
     for(unsigned int i=0;i<mseconds;i++)
     {

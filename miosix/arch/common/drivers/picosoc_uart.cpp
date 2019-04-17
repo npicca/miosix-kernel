@@ -47,22 +47,30 @@ namespace miosix {
 
     PicoSoCUART::PicoSoCUART(int baudrate)
             : Device(Device::STREAM), baudrate(baudrate) {
-        reg_uart_clkdiv = 1000000 / baudrate;
+        reg_uart_clkdiv = TIMER_CLOCK / baudrate;
     }
 
     ssize_t PicoSoCUART::readBlock(void *buffer, size_t size, off_t where) {
 
         Lock<FastMutex> l(useMutex);
         char *buf = reinterpret_cast<char *>(buffer);
+        char c;
+        unsigned int i;
         FastInterruptDisableLock dLock;
 
-        /*for(unsigned int i = 0; i < size; i++){
-            buf[i] = readChar();
-        }
-
-        return size;*/ //todo: indaga con terraneo perche' chiede 256 byte
         buf[0] = readChar();
         return 1;
+        //todo: brutto
+        for(i = 0; i < size; i++){
+            c = readChar();
+            buf[i] = c;
+            if(c == '\n') {
+                i++;
+                break;
+            }
+        }
+
+        return i;
 
     }
 
@@ -94,7 +102,7 @@ namespace miosix {
         while (c == -1) {
             __asm__ volatile ("rdcycle %0" : "=r"(cycles_now));
             cycles = cycles_now - cycles_begin;
-            if (cycles > 12000000) {
+            if (cycles > TIMER_CLOCK) {
                 cycles_begin = cycles_now;
             }
             c = reg_uart_data;
