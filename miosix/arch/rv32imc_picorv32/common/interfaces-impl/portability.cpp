@@ -45,7 +45,7 @@
 namespace miosix_private {
 
 
-/*This is needed because, while inside an irq, all interrupts are permanently disabled until
+/*This hack is needed because, while inside an irq, all interrupts are permanently disabled until
  * a retirq occurs.
  *
  * */
@@ -77,10 +77,10 @@ void IRQsystemReboot()
 {
     IRQerrorLog("rebooting\n");
     doDisableInterrupts();
+
     asm volatile("j _Z13Reset_Handlerv\n");
 }
 
-//todo: implement unaligned access??
 void IRQHandler() __attribute__((noinline));
 void IRQHandler(){
 
@@ -96,29 +96,13 @@ void IRQHandler(){
 
     if(IRQ_vect & UF_UNALIGNED){
 
-        IRQerrorLog("MEM ERROR");
-        /* void* x = malloc(sizeof(int));
-         //unaligned memory access!
-         //According to the RISC-V ISA, unaligned memory access
-         //support is mandatory, be it implemented in hardware or
-         //in the software fault handler. Since picorv32 doesn't support
-         //it, we must do it by hand
-         if(saved_ra & 0x1){
-             //compressed instruction, TODO: implement??
-         } else{
-             //standard 32-bit sized instruction
-             uint32_t instr = *((uint32_t*)(saved_ra - 4));
-             int opcode = instr & 0x7f;
-             switch(opcode){
-                 case 0: //load instr
-                     break;
-                 case 20: //store instr
-                     break;
-             }
-
-         }*/
-
-        for(;;){}
+        /* According to the riscv standard, unaligned memory access should be implemented
+         * by the IRQ handler (if hardware support is missing).
+         * However, since GCC can't generate code that performs unaligned accesses,
+         * we can assume an unaligned access is an error and reset the board as such
+         */
+        IRQerrorLog("Memory alignment erro");
+        unexpectedInterrupt();
     }
 
     if(IRQ_vect & TIMER){
@@ -126,7 +110,6 @@ void IRQHandler(){
         asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
         picorv32_timer_insn(zero, t6);
         picorv32_getq_insn(t6, q3);
-
         miosix::IRQtickInterrupt();
 
     }
@@ -137,9 +120,7 @@ void IRQHandler(){
     }
 
     if(IRQ_vect & 0xfffffff8){
-        IRQerrorLog("UNEXPECTED IRQ");
-        //todo: handle better
-        for(;;){}
+        unexpectedInterrupt();
     }
 }
 
@@ -157,7 +138,7 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
 {
 
     ctxsave[0]=0;
-    ctxsave[1]=(unsigned int)sp;//Initialize the thread's stack pointer
+    ctxsave[1]=(unsigned int)sp; //Initialize the thread's stack pointer
     ctxsave[2]=0;
     ctxsave[3]=0;
     ctxsave[4]=0;
@@ -201,14 +182,15 @@ void IRQportableStartKernel()
 
     picorv32_setq_insn(q3, t6);
 
-    asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
+    asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ):"t6");
 
     picorv32_timer_insn(zero, t6);
 
     picorv32_getq_insn(t6, q3);
 
     ctxsave=s_ctxsave;//make global ctxsave point to it
-    //Note, we can't use enableInterrupts() now since the call is not mathced
+
+    //Note, we can't use enableInterrupts() now since the call is not matched
     //by a call to disableInterrupts()
     __enable_irq();
 
@@ -218,7 +200,7 @@ void IRQportableStartKernel()
 
 void sleepCpu()
 {
-    //todo: implement?
+    //picorv32 doesn't support a low power mode
 }
 
 

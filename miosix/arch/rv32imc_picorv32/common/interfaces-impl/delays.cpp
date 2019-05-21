@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2012 by Terraneo Federico                               *
+ *   Copyright (C) 2010, 2011, 2012 by Terraneo Federico                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,37 +25,41 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#include "gpio_impl.h"
+#include "interfaces/delays.h"
 
 namespace miosix {
 
-void GpioBase::modeImpl(unsigned int p, unsigned char n, Mode::Mode_ m)
+void delayMs(unsigned int mseconds)
 {
-    GPIO_TypeDef* gpio=reinterpret_cast<GPIO_TypeDef*>(p);
+    register const unsigned int count=77;
 
-    gpio->MODER  &= ~(3<<(n*2));
-    gpio->OTYPER &= ~(1<<n);
-    gpio->PUPDR  &= ~(3<<(n*2));
+    for(unsigned int i=0;i<mseconds;i++)
+    {
+        // This delay has been calibrated to take 1 millisecond
+        // It is written in assembler to be independent on compiler optimization
+        asm volatile("             add  t0, zero, %0            \n"
+                     "             addi t1, zero, 1             \n"
+                     "___loop_a_start:                          \n"
+                     "             beq  t0, zero, ___loop_a_out \n"
+                     "             sub  t0, t0, t1              \n"
+                     "             j           ___loop_a_start  \n"
+                     "___loop_a_out:                            \n"::"r"(count):"t0", "t1");
 
-    gpio->MODER  |= (m>>3)<<(n*2);
-    gpio->OTYPER |= ((m>>2) & 1)<<n;
-    gpio->PUPDR  |= (m & 3)<<(n*2);
+    }
 }
 
-void GpioBase::afImpl(unsigned int p, unsigned char n, unsigned char af)
+void delayUs(unsigned int useconds)
 {
-    GPIO_TypeDef* gpio=reinterpret_cast<GPIO_TypeDef*>(p);
-    af &= 0xf;
-
-    if(n<8)
-    {
-        gpio->AFR[0] &= ~(0xf<<(n*4));
-        gpio->AFR[0] |=    af<<(n*4);
-    } else {
-        n-=8;
-        gpio->AFR[1] &= ~(0xf<<(n*4));
-        gpio->AFR[1] |=    af<<(n*4);
-    }
+    // This delay has been calibrated to take x microseconds
+    // It is written in assembler to be independent on compiler optimization
+    useconds /= 24;
+    asm volatile("             add  t0, zero, %0            \n"
+                 "             addi t1, zero, 1             \n"
+                 "___loop_b_start:                          \n"
+                 "             beq  t0, zero, ___loop_b_out \n"
+                 "             sub  t0, t0, t1              \n"
+                 "             j    ___loop_b_start         \n"
+                 "___loop_b_out:                            \n"::"r"(useconds):"t0", "t1");
 }
 
 } //namespace miosix

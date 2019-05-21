@@ -74,6 +74,8 @@ SECTIONS
         /* .rodata: constant data */
         *(.rodata)
         *(.rodata.*)
+        *.(.srodata)
+        *.(.srodata.*)
         *(.gnu.linkonce.r.*)
 
         /* C++ Static constructors/destructors */
@@ -121,25 +123,12 @@ SECTIONS
         KEEP (*(SORT(.dtors.*)))
         KEEP (*crtend.o(.dtors))
 
-    } > flash
-
-	.gcc_except_table : ALIGN(4)
-	{
+        . = ALIGN(4);
         KEEP(*(.gcc_except_table))
         KEEP(*(.gcc_except_table.*))
-	} > flash
 
-	.eh_frame : ALIGN(4)
-	{
-        KEEP(*(.eh_frame))
-        KEEP(*(.eh_frame.*))
-	} > flash
 
-	.eh_frame_hdr : ALIGN(4)
-	{
-		KEEP(*(.eh_frame_hdr))
-		KEEP(*(.eh_frame_hdr.*))
-	}
+    } > flash
 
 
 	/* .data section: global variables go to ram, but also store a copy to
@@ -153,6 +142,9 @@ SECTIONS
         . = ALIGN(4);
         *(.sdata)
         *(.sdata.*)
+        . = ALIGN(4);
+        *(.sdata2)
+        *(.sdata2.*)
         _edata = .;
     } > ram AT > flash
 

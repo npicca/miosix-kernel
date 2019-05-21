@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2017 by Terraneo Federico                               *
+ *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,53 +25,59 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#ifndef BOARD_SETTINGS_H
-#define	BOARD_SETTINGS_H
+#include "kernel/logging.h"
+#include "kernel/kernel.h"
+#include "config/miosix_settings.h"
+#include "interfaces/portability.h"
+#include "interfaces/arch_registers.h"
+#include "interrupts.h"
+#include "interfaces-impl/custom_ops.h"
+#include "miosix.h"
 
-#include "util/version.h"
+using namespace miosix;
+
+#ifdef WITH_ERRLOG
 
 /**
  * \internal
- * Versioning for board_settings.h for out of git tree projects
+ * Used to print an unsigned int in hexadecimal format, and to reboot the system
+ * Note that printf/iprintf cannot be used inside an IRQ, so that's why there's
+ * this function.
+ * \param x number to print
  */
-#define BOARD_SETTINGS_VERSION 100
+static void printUnsignedInt(unsigned int x)
+{
+    static const char hexdigits[]="0123456789abcdef";
+    char result[]="0x........\r\n";
+    for(int i=9;i>=2;i--)
+    {
+        result[i]=hexdigits[x & 0xf];
+        x>>=4;
+    }
+    IRQerrorLog(result);
+}
 
-namespace miosix {
+#endif //WITH_ERRLOG
 
 /**
- * \addtogroup Settings
- * \{
+ * \internal
+ * \return the program counter of the thread that was running when the exception
+ * occurred.
  */
+static unsigned int getProgramCounter()
+{
+    register int reg;
+    picorv32_getq_insn(t6, q0);
+    asm volatile (
+            "add %0, t6, zero"
+            :"=r"(reg));
+    return reg;
+}
 
-/// Size of stack for main().
-/// The C standard library is stack-heavy (iprintf requires 1KB) but the
-/// picosoc we synthetize only has 12KB of RAM so the stack is only 2KB.
-const unsigned int MAIN_STACK_SIZE=2048;
-
-/// Frequency of tick (in Hz). 
-/// For the priority scheduler this is also the context switch frequency
-const unsigned int TICK_FREQ=500;
-
-/// \internal Clock frequency of hardware timer, hardware specific data
-//const unsigned int TIMER_CLOCK=12000000;
-const unsigned int TIMER_CLOCK=22125000;
-
-///\internal Aux timer run @ 100KHz
-///Note that since the timer is only 16 bits this imposes a limit on the
-///burst measurement of 655ms. If due to a pause_kernel() or
-///disable_interrupts() section a thread runs for more than that time, a wrong
-///burst value will be measured
-const unsigned int AUX_TIMER_CLOCK=100000;
-const unsigned int AUX_TIMER_MAX=0xffff; ///<\internal Aux timer is 16 bits
-
-/// Serial port
-const unsigned int defaultSerialSpeed=115200;
-const bool defaultSerialFlowctrl=false;
-
-/**
- * \}
- */
-
-} //namespace miosix
-
-#endif	/* BOARD_SETTINGS_H */
+void unexpectedInterrupt()
+{
+    #ifdef WITH_ERRLOG
+    IRQerrorLog("\r\n***Unexpected interrupt\r\n");
+    #endif //WITH_ERRLOG
+    miosix_private::IRQsystemReboot();
+}

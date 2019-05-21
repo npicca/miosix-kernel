@@ -4,14 +4,6 @@
 #include "kernel/stage_2_boot.h"
 #include <string.h>
 
-/*
- * startup.cpp
- * STM32 C++ startup.
- * NOTE: for stm32f4 devices ONLY.
- * Supports interrupt handlers in C++ without extern "C"
- * Developed by Terraneo Federico, based on ST startup code.
- * Additionally modified to boot Miosix.
- */
 
 /**************************************************************************//**
  * @brief
@@ -30,17 +22,16 @@
 void reset_stub(void) __attribute__((section(".bootstub"), naked));
 void reset_stub(void){
     asm volatile(\
-    "j _Z13Reset_Handlerv\n"\
-    ".balign 16          \n"\
-    "j _ZN14miosix_private13IRQEntrypointEv\n"\
+    "j _Z13Reset_Handlerv\n"                     \
+    ".balign 16          \n"                     \
+    "j _ZN14miosix_private13IRQEntrypointEv\n"   \
     );
 }
 
 
- // TODO: decide where to put SystemInit and NVIC_SystemReset
 void inline SystemInit(void)
 {
-	//since we run on an fpga, it's safer to zero out all registers except for RA(x1), SP (x2),
+	//since we run on an FPGA, it's safer to zero out all registers except for RA(x1), SP (x2),
     // and FP (x8) which have already been set
     asm volatile("li x3, 0\n"\
                  "li x4, 0\n"\

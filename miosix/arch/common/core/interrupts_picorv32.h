@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2013, 2014, 2015 by Terraneo Federico                   *
- *   Copyright (C) 2019 by Filippo Cremonese, Nicolò Picca                 *
+ *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,74 +25,51 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#ifndef ATOMIC_OPS_IMPL_RISCV32_PICORV32_H
-#define	ATOMIC_OPS_IMPL_RISCV32_PICORV32_H
+#include "interfaces-impl/custom_ops.h"
+
+#ifndef INTERRUPTS_H
+#define	INTERRUPTS_H
+
 
 /**
- * picorv32 does not support atomic instructions (riscv ISA A extension)
- * so we have to redefine the atomic operations using functions
- * that disable the interrupts.
- * 
- * TODO: actually this implementation is not very efficient
- * 
+  \brief   Enable IRQ Interrupts
+  \details Enables IRQ interrupts by setting the IRQ bitmask to all zeroes
  */
-
-#include "interfaces/arch_registers.h"
-#include <kernel/kernel.h>
-
-namespace miosix {
-
-
-inline int atomicSwap(volatile int *p, int v)
+__attribute__( ( always_inline ) ) static inline void __enable_irq(void)
 {
-    InterruptDisableLock dLock;
-
-    int result = *p;
-    *p = v;
-
-    return result;
+    picorv32_maskirq_insn(zero, zero);
 }
 
-inline void atomicAdd(volatile int *p, int incr)
-{
-    InterruptDisableLock dLock;
 
-    *p += incr;
+/**
+  \brief   Disable IRQ Interrupts
+  \details Disables IRQ interrupts by setting the IRQ bitmask to all ones
+ */
+__attribute__( ( always_inline ) ) static inline void __disable_irq(void)
+{
+    picorv32_setq_insn(q3,t6);
+    asm volatile(
+            "li t6, 0xffffffff \n"
+            );
+    picorv32_maskirq_insn(zero, t6);
+    picorv32_getq_insn(t6,q3);
 }
 
-inline int atomicAddExchange(volatile int *p, int incr)
+/**
+ * Called when an unexpected interrupt occurs.
+ * It is called by stage_1_boot.cpp for all weak interrupts not defined.
+ */
+void unexpectedInterrupt();
+
+/**
+ * Possible kind of faults that the PicoSoc can report.
+ * Since interrupt 3-31 are user defined, they are not enumerated here
+ */
+enum FaultType
 {
-    InterruptDisableLock dLock;
+    TIMER = 1<<0,     //Timer Interrupt
+    ECALL = 1<<1,     //Process executed an ECALL/EBREAK instruction (or illegal instruction)
+    UF_UNALIGNED=1<<2,//Process attempted unaligned memory access
+};
 
-    int result = *p;
-    *p += incr;
-
-    return result;
-}
-
-inline int atomicCompareAndSwap(volatile int *p, int prev, int next)
-{
-    InterruptDisableLock dLock;
-
-    int result = *p;
-    if(*p == prev) *p = next;
-
-    return result;
-}
-
-inline void *atomicFetchAndIncrement(void * const volatile * p, int offset,
-        int incr)
-{
-    InterruptDisableLock dLock;
-    volatile uint32_t *pt;
-
-    void *result = *p;
-    if(result == 0) return 0;
-    pt = (uint32_t*)(result) + offset;
-    *pt += incr;
-    return result;
-}
-
-} //namespace miosix
-
-#endif //ATOMIC_OPS_IMPL_RISCV32_PICORV32_H
+#endif	//INTERRUPTS_H
