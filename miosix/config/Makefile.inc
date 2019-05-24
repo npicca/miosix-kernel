@@ -64,7 +64,7 @@ OPT_OPTIMIZATION := -O2
 ## implicitly uses it) uncomment this option.
 ## the -D__NO_EXCEPTIONS is used by Miosix to know if exceptions are used.
 ##
-#OPT_EXCEPT := -fno-exceptions -fno-rtti -D__NO_EXCEPTIONS
+OPT_EXCEPT := -fno-exceptions -fno-rtti -D__NO_EXCEPTIONS
 
 #############################################################################
 ## Board specific options
@@ -2288,9 +2288,9 @@ else ifeq ($(ARCH), rv32imc_picorv32)
       SZ  := $(PREFIX)size
 
       ## Select appropriate compiler flags for both ASM/C/C++/linker
-      AFLAGS_BASE   := -march=rv32imc
-      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32imc $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
-      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32imc $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
+      AFLAGS_BASE   := -march=rv32im
+      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) $(OPT_EXCEPT) -Wno-unused-local-typedefs -c
+      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) $(OPT_EXCEPT) -Wno-unused-local-typedefs -c
       LFLAGS_BASE   := -Wl,--gc-sections,-Map,main.map                            \
                        -Wl,-T$(KPATH)/$(LINKER_SCRIPT) $(OPT_EXCEPT)              \
                        $(OPT_OPTIMIZATION) -nostdlib

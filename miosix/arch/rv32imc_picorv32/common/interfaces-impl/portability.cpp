@@ -57,6 +57,7 @@ void IRQErrorHandler(miosix::Error e){
     picorv32_retirq_insn();
 }
 
+void IRQstackOverflowCheck() __attribute__((noinline));
 void IRQstackOverflowCheck()
 {
 
@@ -69,8 +70,9 @@ void IRQstackOverflowCheck()
     }
 
     if(miosix::cur->ctxsave[1] < reinterpret_cast<unsigned int>(
-            miosix::cur->watermark+watermarkSize))
+            miosix::cur->watermark+watermarkSize)) {
         IRQErrorHandler(miosix::STACK_OVERFLOW);
+    }
 }
 
 void IRQsystemReboot()
@@ -81,40 +83,34 @@ void IRQsystemReboot()
     asm volatile("j _Z13Reset_Handlerv\n");
 }
 
-void IRQHandler() __attribute__((noinline));
-void IRQHandler(){
+void IRQHandler() noexcept __attribute__((noinline));
+void IRQHandler() noexcept {
 
-    register int IRQ_vect, saved_ra;
-
-    picorv32_getq_insn(t6,q0);
-    asm volatile("add %0, t6, zero":"=r"(saved_ra));
+    register int IRQ_vect;
 
     picorv32_getq_insn(t5, q1);
-    asm volatile("add %0, t5, zero":"=r"(IRQ_vect));
 
-    IRQstackOverflowCheck();
+    asm volatile("add %0, t5, zero":"=r"(IRQ_vect)::"t5");
 
     if(IRQ_vect & UF_UNALIGNED){
 
         /* According to the riscv standard, unaligned memory access should be implemented
          * by the IRQ handler (if hardware support is missing).
          * However, since GCC can't generate code that performs unaligned accesses,
-         * we can assume an unaligned access is an error and reset the board as such
+         * we can treat an unaligned access as an error and reset the board as such
          */
-        IRQerrorLog("Memory alignment erro");
+        IRQerrorLog("Memory alignment error");
         unexpectedInterrupt();
     }
 
     if(IRQ_vect & TIMER){
         picorv32_setq_insn(q3, t6);
-        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ));
+        asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ):"t6");
         picorv32_timer_insn(zero, t6);
         picorv32_getq_insn(t6, q3);
         miosix::IRQtickInterrupt();
 
-    }
-    
-    else if(IRQ_vect & ECALL){ //we don't want a double context switch caused by tick+ecall
+    } else if(IRQ_vect & ECALL){
 
         miosix::Scheduler::IRQfindNextThread();
     }
@@ -128,6 +124,7 @@ void IRQEntrypoint() __attribute__((naked));
 void IRQEntrypoint()
 {
     saveContext();
+    IRQstackOverflowCheck();
     IRQHandler();
     restoreContext();
     picorv32_retirq_insn();
@@ -168,7 +165,7 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
     ctxsave[28]=0;
     ctxsave[29]=0;
     ctxsave[30]=0;
-    ctxsave[31]=(unsigned int)&miosix::Thread::threadLauncher; //q0 contains the IRQ return address
+    ctxsave[31]=(unsigned int)miosix::Thread::threadLauncher; //q0 contains the IRQ return address
 
 
 }
@@ -200,7 +197,7 @@ void IRQportableStartKernel()
 
 void sleepCpu()
 {
-    //picorv32 doesn't support a low power mode
+    return;//picorv32 doesn't support a low power mode
 }
 
 

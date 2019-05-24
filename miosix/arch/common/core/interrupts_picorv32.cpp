@@ -45,7 +45,7 @@ using namespace miosix;
  * this function.
  * \param x number to print
  */
-static void printUnsignedInt(unsigned int x)
+void printUnsignedInt(unsigned int x)
 {
     static const char hexdigits[]="0123456789abcdef";
     char result[]="0x........\r\n";

@@ -60,7 +60,7 @@ namespace miosix {
 
         buf[0] = readChar();
         return 1;
-        //todo: brutto
+        // todo: brutto
         for(i = 0; i < size; i++){
             c = readChar();
             buf[i] = c;

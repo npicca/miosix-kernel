@@ -55,6 +55,7 @@ const unsigned int TICK_FREQ=500;
 /// \internal Clock frequency of board, hardware specific data
 const unsigned int TIMER_CLOCK=22125000;
 
+//FIXME: this is here only to make it compile, there's no AUX_TIMER in picosoc
 ///\internal Aux timer run @ 100KHz
 ///Note that since the timer is only 16 bits this imposes a limit on the
 ///burst measurement of 655ms. If due to a pause_kernel() or

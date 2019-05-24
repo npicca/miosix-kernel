@@ -72,4 +72,7 @@ enum FaultType
     UF_UNALIGNED=1<<2,//Process attempted unaligned memory access
 };
 
+
+void printUnsignedInt(unsigned int x);
+
 #endif	//INTERRUPTS_H
