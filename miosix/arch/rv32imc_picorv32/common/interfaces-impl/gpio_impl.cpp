@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010, 2011, 2012 by Terraneo Federico                   *
+ *   Copyright (C) 2012 by Terraneo Federico                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,41 +25,8 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#include "interfaces/delays.h"
+#include "gpio_impl.h"
 
 namespace miosix {
-
-void delayMs(unsigned int mseconds)
-{
-    register const unsigned int count=42*2;//todo:ricalibra;
-
-    for(unsigned int i=0;i<mseconds;i++)
-    {
-        // This delay has been calibrated to take 1 millisecond
-        // It is written in assembler to be independent on compiler optimization
-        asm volatile("             add  t0, zero, %0            \n"
-                     "             addi t1, zero, 1             \n"
-                     "___loop_a_start:                          \n"
-                     "             beq  t0, zero, ___loop_a_out \n"
-                     "             sub  t0, t0, t1              \n"
-                     "             j           ___loop_a_start  \n"
-                     "___loop_a_out:                            \n"::"r"(count):"t0", "t1");
-
-    }
-}
-
-void delayUs(unsigned int useconds)
-{
-    // This delay has been calibrated to take x microseconds
-    // It is written in assembler to be independent on compiler optimization
-    useconds /= 24;
-    asm volatile("             add  t0, zero, %0            \n"
-                 "             addi t1, zero, 1             \n"
-                 "___loop_b_start:                          \n"
-                 "             beq  t0, zero, ___loop_b_out \n"
-                 "             sub  t0, t0, t1              \n"
-                 "             j    ___loop_b_start         \n"
-                 "___loop_b_out:                            \n"::"r"(useconds):"t0", "t1");
-}
-
+    //picosoc doesn't offer a gpio port, but the file is needed for the OS to compile
 } //namespace miosix

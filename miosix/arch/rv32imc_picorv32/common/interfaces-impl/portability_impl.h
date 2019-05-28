@@ -47,12 +47,12 @@
  * Registers are saved in the following order:
  *
  * *ctxsave+0   --> x1
- * *ctxsave+4   --> r2
+ * *ctxsave+4   --> x2
  * ...
  * *ctxsave+120 --> x31
  * *ctxsave+124 --> q0
  * *ctxsave+128 --> q1
- * Register x0 is not saved
+ * Register x0 (zero register) is not saved
  */
 extern "C" {
 extern volatile unsigned int *ctxsave;
@@ -70,17 +70,17 @@ extern volatile unsigned int *ctxsave;
     picorv32_setq_insn(q2, t0); /* save t0 to q2 */                            \
     picorv32_setq_insn(q3, t1); /* save t1 to q3 */                            \
     asm volatile(                                                              \
-            "la t0,  ctxsave                       \n"                         \
-            "lw t0, 0(t0)                          \n"                         \
-            "sw ra,   0*4+0(t0)                    \n"                         \
-            "sw sp,   1*4+0(t0)                    \n"                         \
-            "sw gp,   2*4+0(t0)                    \n"                         \
-            "sw tp,   3*4+0(t0)                    \n"                         \
+            "la t0,    ctxsave                     \n"                         \
+            "lw t0,      0(t0)                     \n"                         \
+            "sw ra,  0*4+0(t0)                     \n"                         \
+            "sw sp,  1*4+0(t0)                     \n"                         \
+            "sw gp,  2*4+0(t0)                     \n"                         \
+            "sw tp,  3*4+0(t0)                     \n"                         \
              /*not t0  for now*/                                               \
-            "sw t1,   5*4+0(t0)                    \n"                         \
-            "sw t2,   6*4+0(t0)                    \n"                         \
-            "sw s0,   7*4+0(t0)                    \n"                         \
-            "sw s1,   8*4+0(t0)                    \n"                         \
+            "sw t1,  5*4+0(t0)                     \n"                         \
+            "sw t2,  6*4+0(t0)                     \n"                         \
+            "sw s0,  7*4+0(t0)                     \n"                         \
+            "sw s1,  8*4+0(t0)                     \n"                         \
             "sw a0,  9*4+0(t0)                     \n"                         \
             "sw a1, 10*4+0(t0)                     \n"                         \
             "sw a2, 11*4+0(t0)                     \n"                         \
@@ -97,8 +97,8 @@ extern volatile unsigned int *ctxsave;
             "sw s7, 22*4+0(t0)                     \n"                         \
             "sw s8, 23*4+0(t0)                     \n"                         \
             "sw s9, 24*4+0(t0)                     \n"                         \
-            "sw s10, 25*4+0(t0)                    \n"                         \
-            "sw s11, 26*4+0(t0)                    \n"                         \
+            "sw s10,25*4+0(t0)                     \n"                         \
+            "sw s11,26*4+0(t0)                     \n"                         \
             "sw t3, 27*4+0(t0)                     \n"                         \
             "sw t4, 28*4+0(t0)                     \n"                         \
             "sw t5, 29*4+0(t0)                     \n"                         \
@@ -113,6 +113,7 @@ extern volatile unsigned int *ctxsave;
     /* Restore t0 and t1 */                                                    \
     picorv32_getq_insn(t0,q2);                                                 \
     picorv32_getq_insn(t1,q3);                                                 \
+    asm volatile("la sp, _main_stack_top");                                    \
 }
 
 /**
@@ -130,7 +131,7 @@ extern volatile unsigned int *ctxsave;
             "lw sp,  1*4+0(t0)                    \n"                          \
             "lw gp,  2*4+0(t0)                    \n"                          \
             "lw tp,  3*4+0(t0)                    \n"                          \
-            /* not t0 for now */                                              \
+            /* not t0 for now */                                               \
             /* not t1 for now */                                               \
             "lw t2,  6*4+0(t0)                    \n"                          \
             "lw s0,  7*4+0(t0)                    \n"                          \
@@ -156,10 +157,11 @@ extern volatile unsigned int *ctxsave;
             "lw t3, 27*4+0(t0)                    \n"                          \
             "lw t4, 28*4+0(t0)                    \n"                          \
             "lw t5, 29*4+0(t0)                    \n"                          \
-            "lw t6, 30*4+0(t0)                    \n"                         ); \
-    asm volatile ("lw t1, 31*4+0(t0)");                                        \
+            "lw t6, 30*4+0(t0)                    \n"                       ); \
+                                                                               \
+    asm volatile ("lw t1, 31*4+0(t0)");  /* load saved q0 in t1   */           \
     picorv32_setq_insn(q0,t1);                                                 \
-    asm volatile("lw t1, 5*4+0(t0)\n"                                          \
+    asm volatile("lw t1, 5*4+0(t0)\n"    /*now we can restore t0 and t1 */     \
                  "lw t0, 4*4+0(t0)\n");                                        \
 }
 

@@ -83,14 +83,13 @@ minimize power consumption all unused GPIO must not be left floating.
 */
 void shutdown()
 {
-    // TODO: implement shutdown()
-    for(;;) ;
+    // The picosoc doesn't support a way to shutdown, so we simply force a reboot
+    reboot();
 }
 
 void reboot()
 {
-    //ioctl(STDOUT_FILENO,IOCTL_SYNC,0);
-    
+
     #ifdef WITH_FILESYSTEM
     FilesystemManager::instance().umountAll();
     #endif //WITH_FILESYSTEM

@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2013, 2014, 2015 by Terraneo Federico                   *
- *   Copyright (C) 2019 by Filippo Cremonese, Nicolò Picca                 *
+ *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,71 +25,59 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#ifndef ATOMIC_OPS_IMPL_RISCV32_PICORV32_H
-#define	ATOMIC_OPS_IMPL_RISCV32_PICORV32_H
+#include "kernel/logging.h"
+#include "kernel/kernel.h"
+#include "config/miosix_settings.h"
+#include "interfaces/portability.h"
+#include "interfaces/arch_registers.h"
+#include "interrupts.h"
+#include "interfaces-impl/custom_ops.h"
+#include "miosix.h"
+
+using namespace miosix;
+
+#ifdef WITH_ERRLOG
 
 /**
- * picorv32 does not support atomic instructions (riscv ISA A extension)
- * so we have to redefine the atomic operations using functions
- * that disable the interrupts.
- * 
- * TODO: actually this implementation is not very efficient
- * 
+ * \internal
+ * Used to print an unsigned int in hexadecimal format, and to reboot the system
+ * Note that printf/iprintf cannot be used inside an IRQ, so that's why there's
+ * this function.
+ * \param x number to print
  */
-
-#include "interfaces/arch_registers.h"
-#include <kernel/kernel.h>
-
-namespace miosix {
-
-
-inline int atomicSwap(volatile int *p, int v)
+void printUnsignedInt(unsigned int x)
 {
-    InterruptDisableLock dLock;
-
-    int result = *p;
-    *p = v;
-
-    return result;
+    static const char hexdigits[]="0123456789abcdef";
+    char result[]="0x........\r\n";
+    for(int i=9;i>=2;i--)
+    {
+        result[i]=hexdigits[x & 0xf];
+        x>>=4;
+    }
+    IRQerrorLog(result);
 }
 
-inline void atomicAdd(volatile int *p, int incr)
-{
-    InterruptDisableLock dLock;
+#endif //WITH_ERRLOG
 
-    *p += incr;
+/**
+ * \internal
+ * \return the program counter of the thread that was running when the exception
+ * occurred.
+ */
+static unsigned int getProgramCounter()
+{
+    register int reg;
+    picorv32_getq_insn(t6, q0);
+    asm volatile (
+            "add %0, t6, zero"
+            :"=r"(reg));
+    return reg;
 }
 
-inline int atomicAddExchange(volatile int *p, int incr)
+void unexpectedInterrupt()
 {
-    InterruptDisableLock dLock;
-
-    int result = *p;
-    *p += incr;
-
-    return result;
+    #ifdef WITH_ERRLOG
+    IRQerrorLog("\r\n***Unexpected interrupt\r\n");
+    #endif //WITH_ERRLOG
+    miosix_private::IRQsystemReboot();
 }
-
-inline int atomicCompareAndSwap(volatile int *p, int prev, int next)
-{
-    InterruptDisableLock dLock;
-
-    int result = *p;
-    if(*p == prev) *p = next;
-
-    return result;
-}
-
-inline void *atomicFetchAndIncrement(void * const volatile * p, int offset,
-        int incr)
-{
-    InterruptDisableLock dLock;
-    int *result=(int*)*p;
-    if(result==0) return 0;
-    *(result+offset)+=incr;
-    return result;
-}
-
-} //namespace miosix
-
-#endif //ATOMIC_OPS_IMPL_RISCV32_PICORV32_H

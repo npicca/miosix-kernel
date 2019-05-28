@@ -285,6 +285,7 @@ $SUDO ../$GCC/configure \
 	--enable-lto \
 	--disable-wchar_t \
 	--with-newlib \
+	--enable-sjlj-exceptions \
 	--with-headers=../$NEWLIB/newlib/libc/include \
 	2>../log/d.txt							|| quit ":: Error configuring gcc-start"
 
@@ -390,7 +391,6 @@ cd ..
 # set, but since Cortex M3 only has the thumb2 instruction set, the CPU locked.
 # By checking that all multilibs are correctly built, this error can be spotted
 # immediately instead of leaving a gcc that produces wrong code in the wild. 
-#FIXME: add appripriate riscv libs
 
 check_multilibs() {
 	if [[ ! -f $1/libc.a ]]; then

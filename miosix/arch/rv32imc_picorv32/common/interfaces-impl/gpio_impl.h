@@ -25,17 +25,7 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-/*
- * Versions:
- * 1.0 First release
- * 1.1 Made Mode, Gpio and GpioBase contructor private to explicitly disallow
- *     creating instances of these classes.
- * 1.2 Fixed a bug
- * 1.3 Applied patch by Lee Richmond (http://pastebin.com/f7ae1a65f). Now
- *     mode() is inlined too.
- * 1.4 Adapted to stm32f2
- * 1.5 Added GpioPin for easily passing a Gpio as a parameter to a function
- */
+
 
 #ifndef GPIO_IMPL_H
 #define GPIO_IMPL_H
@@ -43,7 +33,7 @@
 #include "interfaces/arch_registers.h"
 
 /**
-  * @brief General Purpose I/O
+  * @brief General Purpose I/O. NOTE: picosoc doesn't support it, but it's needed to compile miosix
   */
 
 typedef struct {} GPIO_TypeDef;

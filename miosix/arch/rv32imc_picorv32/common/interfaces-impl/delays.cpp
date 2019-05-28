@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010, 2011, 2012, 2013, 2014 by Terraneo Federico       *
+ *   Copyright (C) 2010, 2011, 2012 by Terraneo Federico                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,51 +25,41 @@
  *   along with this program; if not, see <http://www.gnu.org/licenses/>   *
  ***************************************************************************/
 
-#include "interfaces-impl/custom_ops.h"
+#include "interfaces/delays.h"
 
-#ifndef INTERRUPTS_H
-#define	INTERRUPTS_H
+namespace miosix {
 
-
-/**
-  \brief   Enable IRQ Interrupts
-  \details Enables IRQ interrupts by setting the IRQ bitmask to all zeroes
- */
-__attribute__( ( always_inline ) ) static inline void __enable_irq(void)
+void delayMs(unsigned int mseconds)
 {
-    picorv32_maskirq_insn(zero, zero);
+    register const unsigned int count=77;
+
+    for(unsigned int i=0;i<mseconds;i++)
+    {
+        // This delay has been calibrated to take 1 millisecond
+        // It is written in assembler to be independent on compiler optimization
+        asm volatile("             add  t0, zero, %0            \n"
+                     "             addi t1, zero, 1             \n"
+                     "___loop_a_start:                          \n"
+                     "             beq  t0, zero, ___loop_a_out \n"
+                     "             sub  t0, t0, t1              \n"
+                     "             j           ___loop_a_start  \n"
+                     "___loop_a_out:                            \n"::"r"(count):"t0", "t1");
+
+    }
 }
 
-
-/**
-  \brief   Disable IRQ Interrupts
-  \details Disables IRQ interrupts by setting the IRQ bitmask to all ones
- */
-__attribute__( ( always_inline ) ) static inline void __disable_irq(void)
+void delayUs(unsigned int useconds)
 {
-    picorv32_setq_insn(q3,t6);
-    asm volatile(
-            "li t6, 0xffffffff \n"
-            );
-    picorv32_maskirq_insn(zero, t6);
-    picorv32_getq_insn(t6,q3);
+    // This delay has been calibrated to take x microseconds
+    // It is written in assembler to be independent on compiler optimization
+    useconds /= 24;
+    asm volatile("             add  t0, zero, %0            \n"
+                 "             addi t1, zero, 1             \n"
+                 "___loop_b_start:                          \n"
+                 "             beq  t0, zero, ___loop_b_out \n"
+                 "             sub  t0, t0, t1              \n"
+                 "             j    ___loop_b_start         \n"
+                 "___loop_b_out:                            \n"::"r"(useconds):"t0", "t1");
 }
 
-/**
- * Called when an unexpected interrupt occurs.
- * It is called by stage_1_boot.cpp for all weak interrupts not defined.
- */
-void unexpectedInterrupt();
-
-/**
- * Possible kind of faults that the PicoSoc can report.
- */
-// TODO: fill fault type enum for IRQ 3-7
-enum FaultType
-{
-    TIMER = 1<<0,     //Timer Interrupt
-    ECALL = 1<<1,     //Process executed an ECALL/EBREAK instruction (or illegal instruction)
-    UF_UNALIGNED=1<<2,//Process attempted unaligned memory access
-};
-
-#endif	//INTERRUPTS_H
+} //namespace miosix

@@ -1382,6 +1382,7 @@ static void test_6()
     //This thread will hold the lock until we terminate it
     Thread *t=Thread::create(t6_p4,STACK_SMALL,0);
     Thread::yield();
+    Thread::yield(); //just to be safe
     if(t6_m1.tryLock()==true) fail("Mutex::tryLock() (1)");
     Thread::sleep(10);
     if(t6_m1.tryLock()==true) fail("Mutex::tryLock() (2)");
@@ -1562,6 +1563,7 @@ static void test_6()
     //This thread will hold the lock until we terminate it
     t=Thread::create(t6_p4a,STACK_SMALL,0);
     Thread::yield();
+    Thread::yield(); //just to be safe
     if(t6_m1a.tryLock()==true) fail("Mutex::tryLock() (1a)");
     Thread::sleep(10);
     if(t6_m1a.tryLock()==true) fail("Mutex::tryLock() (2a)");
@@ -3231,8 +3233,8 @@ static bool t22_v5;
 
 struct t22_s1
 {
-    int a;
-    int b;
+    volatile int a;
+    volatile int b;
 };
 
 static void t22_t2(void *argv)
@@ -3312,7 +3314,8 @@ static void test_22()
     bool error=false;
     Thread *t2=Thread::create(t22_t2,STACK_MIN,0,0,Thread::JOINABLE);
     {
-        FastInterruptDisableLock dLock;
+        //Some architectures may implement atomic operations by disabling interrupts
+        InterruptDisableLock dLock;
         t22_v5=false;
         
         int x=10;

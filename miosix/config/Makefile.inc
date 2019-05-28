@@ -45,7 +45,7 @@
 #OPT_BOARD := stm32f205_generic
 #OPT_BOARD := stm32f103cx_generic
 #OPT_BOARD := stm32f072rb_stm32f0discovery
-OPT_BOARD := riscv32imc_picorv32
+OPT_BOARD := picosoc
 
 ##
 ## Optimization flags, choose one.
@@ -64,7 +64,7 @@ OPT_OPTIMIZATION := -O2
 ## implicitly uses it) uncomment this option.
 ## the -D__NO_EXCEPTIONS is used by Miosix to know if exceptions are used.
 ##
-#OPT_EXCEPT := -fno-exceptions -fno-rtti -D__NO_EXCEPTIONS
+OPT_EXCEPT := -fno-exceptions -fno-rtti -D__NO_EXCEPTIONS
 
 #############################################################################
 ## Board specific options
@@ -623,8 +623,8 @@ else ifeq ($(OPT_BOARD),stm32f103cx_generic)
     ARCH := cortexM3_stm32
 else ifeq ($(OPT_BOARD),stm32f072rb_stm32f0discovery)
     ARCH := cortexM0_stm32f0
-else ifeq ($(OPT_BOARD),riscv32imc_picorv32)
-     ARCH := riscv32imc_picorv32
+else ifeq ($(OPT_BOARD), picosoc)
+     ARCH := rv32imc_picorv32
 else
     $(info Error: no board specified in miosix/config/Makefile.inc)
     $(error Error)
@@ -635,9 +635,9 @@ endif
 ## Then, initialize C/C++ flags
 ##
 CFLAGS_BASE   := -D_MIOSIX_BOARDNAME=\"$(OPT_BOARD)\" \
-                 -ffunction-sections -Wall -Wno-unused-but-set-variable
+                 -ffunction-sections -Wall -Wno-unused-but-set-variable -g
 CXXFLAGS_BASE := -D_MIOSIX_BOARDNAME=\"$(OPT_BOARD)\" -std=gnu++11 \
-                 -ffunction-sections -Wall -Wno-unused-but-set-variable
+                 -ffunction-sections -Wall -Wno-unused-but-set-variable -g
 
 ##
 ## Now two big switch-like constructs nested. The first lists all possible
@@ -2235,18 +2235,18 @@ else ifeq ($(ARCH),cortexM0_stm32f0)
     arch/common/CMSIS/Device/ST/STM32F0xx/Source/Templates/system_stm32f0xx.c
 
 ##-----------------------------------------------------------------------------
-## ARCHITECTURE: riscv32imc_picorv32
+## ARCHITECTURE: rv32imc_picorv32
 ##
-else ifeq ($(ARCH),riscv32imc_picorv32)
+else ifeq ($(ARCH), rv32imc_picorv32)
     ## Base directory with else header files for this board
-    ARCH_INC := arch/riscv32imc_picorv32/common
+    ARCH_INC := arch/rv32imc_picorv32/common
 
     ##-------------------------------------------------------------------------
-    ## BOARD: picorv32
+    ## BOARD: picosoc
     ##
-    ifeq ($(OPT_BOARD),riscv32imc_picorv32)
+    ifeq ($(OPT_BOARD),picosoc)
         ## Base directory with header files for this board
-        BOARD_INC := arch/riscv32imc_picorv32/riscv32imc_picorv32
+        BOARD_INC := arch/rv32imc_picorv32/picosoc
 
         ## Select linker script and boot file
         ## Their path must be relative to the miosix directory.
@@ -2255,14 +2255,11 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
 
         ## Select architecture specific files
         ## These are the files in arch/<arch name>/<board name>
-        #ARCH_SRC :=                                  \
+        ARCH_SRC := $(BOARD_INC)/interfaces-impl/bsp.cpp
 
         ## Add a #define to allow querying board name
-        CFLAGS_BASE   += -D_BOARD_PICORV32
-        CXXFLAGS_BASE += -D_BOARD_PICORV32
-
-        ## Select clock frequency (HSE_VALUE is the xtal on board, fixed)
-        #CLOCK_FREQ := -DHSE_VALUE=25000000 -DSYSCLK_FREQ_400MHz=400000000
+        CFLAGS_BASE   += -D_BOARD_PICOSOC
+        CXXFLAGS_BASE += -D_BOARD_PICOSOC
 
         ## Select programmer command line
         ## This is the program that is invoked when the user types
@@ -2291,11 +2288,9 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       SZ  := $(PREFIX)size
 
       ## Select appropriate compiler flags for both ASM/C/C++/linker
-      ## For now we'll fallback to M4 which is compatible, but does not support
-      ## double precision HW floating point
-      AFLAGS_BASE   := -march=rv32imc
-      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
-      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) -Wno-unused-local-typedefs -c
+      AFLAGS_BASE   := -march=rv32im
+      CFLAGS_BASE   += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) $(OPT_EXCEPT) -Wno-unused-local-typedefs -c
+      CXXFLAGS_BASE += -D_ARCH_RISCV32IMC_PICORV32 -mstrict-align -march=rv32im $(OPT_OPTIMIZATION) $(OPT_EXCEPT) -Wno-unused-local-typedefs -c
       LFLAGS_BASE   := -Wl,--gc-sections,-Map,main.map                            \
                        -Wl,-T$(KPATH)/$(LINKER_SCRIPT) $(OPT_EXCEPT)              \
                        $(OPT_OPTIMIZATION) -nostdlib
@@ -2303,12 +2298,11 @@ else ifeq ($(ARCH),riscv32imc_picorv32)
       ## Select architecture specific files
       ## These are the files in arch/<arch name>/common
       ARCH_SRC +=                                                           \
-      arch/common/core/interrupts_riscv32_picorv32.cpp                      \
       arch/common/drivers/picosoc_uart.cpp									\
-      arch/riscv32imc_picorv32/riscv32imc_picorv32/interfaces-impl/bsp.cpp  \
+      arch/common/core/interrupts_picorv32.cpp                              \
       $(ARCH_INC)/interfaces-impl/portability.cpp                           \
       $(ARCH_INC)/interfaces-impl/delays.cpp                                \
-      arch/common/core/interrupts_riscv32_picorv32.cpp                      \
+
 
 
 ##-----------------------------------------------------------------------------
