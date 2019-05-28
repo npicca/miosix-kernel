@@ -125,7 +125,7 @@ void program_startup()
 void Reset_Handler() __attribute__((noreturn, naked));
 void Reset_Handler()
 {
-    asm volatile("la sp,  _heap_end");
+    asm volatile("la sp,  _main_stack_bottom");
 
     program_startup();
 }

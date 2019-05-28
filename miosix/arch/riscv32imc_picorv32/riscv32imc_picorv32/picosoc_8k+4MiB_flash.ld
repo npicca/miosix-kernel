@@ -34,11 +34,16 @@
  * the MEMORY definitions below accordingly.
  */
 /* TODO: capire se la stack size è giusta (1.5k o 0.5k?) */
-_main_stack_size = 0x00000200;                     /* main stack = 512Bytes */
-_main_stack_top  = 0x0 + _main_stack_size;
+_ram_size = 0x3000;
+_ram_start = 0x0;
+_ram_end = _ram_start + _ram_size;
+
+_main_stack_size = 0x200;                     /* main stack = 512Bytes */
+_main_stack_bottom = _ram_end;
+_main_stack_top  = _main_stack_bottom - _main_stack_size;
 ASSERT(_main_stack_size   % 8 == 0, "MAIN stack size error");
 
-_heap_end = 0x3000;                            /* end of available ram  */
+_heap_end = _main_stack_top;                            /* end of available ram  */
 
 /* identify the Entry Point  */
 ENTRY(_Z13Reset_Handlerv)
@@ -47,12 +52,7 @@ ENTRY(_Z13Reset_Handlerv)
 MEMORY
 {
     flash(rx)   : ORIGIN = 0x0100000, LENGTH = 4M
-
-    /*
-     * Note, the ram starts at 0x0 but it is necessary to add the size
-     * of the main stack, so it is 0x20000200.
-     */
-    ram(wx)     : ORIGIN = 0x200, LENGTH =  12K - _main_stack_size
+    ram(wx)     : ORIGIN = 0x30, LENGTH = 12K - 0x30
 }
 
 /* now define the output sections  */
@@ -160,7 +160,7 @@ SECTIONS
     . = ALIGN(16);
 
     /* .bss section: uninitialized global variables go to ram */
-        .bss :
+    .bss :
         {
          _bss_start = .;
         *(.bss)
