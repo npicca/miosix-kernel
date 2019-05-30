@@ -21,9 +21,19 @@
 
 void reset_stub(void) __attribute__((section(".bootstub"), naked));
 void reset_stub(void){
-    asm volatile(\
-    "j _Z13Reset_Handlerv\n"                     \
-    ".balign 16          \n"                     \
+    /* At reset, gp is loaded with a specific address (in the middle of sdata section), in order
+     * speed up accesses to frequently used memory locations (this is called linker relaxation).
+     * The options are needed in order to prevent the linker from relaxing the initialization
+     * of the register
+     */
+
+    asm volatile(                                \
+    ".option push \n"                            \
+    ".option norelax \n"                         \
+    "la gp, __global_pointer$ \n"                \
+    ".option pop \n"                             \
+    "j _Z13Reset_Handlerv \n"                    \
+    ".balign 16           \n"                    \
     "j _ZN14miosix_private13IRQEntrypointEv\n"   \
     );
 }
@@ -31,10 +41,9 @@ void reset_stub(void){
 
 void inline SystemInit(void)
 {
-	//since we run on an FPGA, it's safer to zero out all registers except for RA(x1), SP (x2),
+	//since we run on an FPGA, it's safer to zero out all registers except for RA(x1), SP (x2), GP(x3)
     // and FP (x8) which have already been set
-    asm volatile("li x3, 0\n"\
-                 "li x4, 0\n"\
+    asm volatile("li x4, 0\n"\
                  "li x5, 0\n"\
                  "li x6, 0\n"\
                  "li x7, 0\n"\

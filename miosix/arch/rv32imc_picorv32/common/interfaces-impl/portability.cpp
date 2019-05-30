@@ -83,8 +83,8 @@ void IRQsystemReboot()
     asm volatile("j _Z13Reset_Handlerv\n");
 }
 
-void IRQHandler() noexcept __attribute__((noinline));
-void IRQHandler() noexcept {
+void IRQHandler() __attribute__((noinline));
+void IRQHandler() {
 
     register int IRQ_vect;
 
@@ -104,6 +104,7 @@ void IRQHandler() noexcept {
     }
 
     if(IRQ_vect & TIMER){
+
         picorv32_setq_insn(q3, t6);
         asm volatile("mv t6, %0"::"r"(miosix::TIMER_CLOCK/miosix::TICK_FREQ):"t6");
         picorv32_timer_insn(zero, t6);
@@ -116,6 +117,9 @@ void IRQHandler() noexcept {
     }
 
     if(IRQ_vect & 0xfffffff8){
+        /* these interrupts are disabled by default on the PicoSoC, as they
+         * are hardware driven (and configurable via the Verilog source)
+         */
         unexpectedInterrupt();
     }
 }
@@ -142,9 +146,9 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
     ctxsave[5]=0;
     ctxsave[6]=0;
     ctxsave[7]=0;
-    ctxsave[8]=0;
-    ctxsave[9]=(unsigned int)pc;
-    ctxsave[10]=(unsigned int)argv;
+    ctxsave[8]=(unsigned int)pc; //a0 is the first argument to threadLauncher
+    ctxsave[9]=(unsigned int)argv; //a1 is the second argument to threadLauncher
+    ctxsave[10]=0;
     ctxsave[11]=0;
     ctxsave[12]=0;
     ctxsave[13]=0;
@@ -164,8 +168,7 @@ void initCtxsave(unsigned int *ctxsave, void *(*pc)(void *), unsigned int *sp,
     ctxsave[27]=0;
     ctxsave[28]=0;
     ctxsave[29]=0;
-    ctxsave[30]=0;
-    ctxsave[31]=(unsigned int)miosix::Thread::threadLauncher; //q0 contains the IRQ return address
+    ctxsave[30]=(unsigned int)miosix::Thread::threadLauncher; //q0 contains the IRQ return address
 
 
 }
@@ -197,7 +200,7 @@ void IRQportableStartKernel()
 
 void sleepCpu()
 {
-    return;//picorv32 doesn't support a low power mode
+    return; //picorv32 doesn't support a low power mode
 }
 
 
