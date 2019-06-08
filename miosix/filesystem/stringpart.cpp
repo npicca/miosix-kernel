@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Terraneo Federico                               *
+ *   Copyright (C) 2019 by Cremonese Filippo, Picca Niccolò                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -127,10 +128,13 @@ bool StringPart::startsWith(const StringPart& rhs) const
 size_t StringPart::findLastOf(char c) const
 {
     const char *begin=c_str();
+#ifndef _ARCH_RISCV32IMC_PICORV32
     //Not strrchr() to take advantage of knowing the string length
-    // void *index=memrchr(begin,c,length());
-    // TODO: Actually memrchr is not found by the compiler
+    void *index=memrchr(begin,c,length());
+#else
+    // TODO: Actually memrchr is not found by the compiler when compiling for RISCV
     void *index=strrchr(begin,c);
+#endif
     if(index==0) return std::string::npos;
     return reinterpret_cast<char*>(index)-begin;
 }
