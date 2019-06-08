@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013 by Terraneo Federico *
+ *   Copyright (C) 2019 by Cremonese Filippo, Picca Niccolò                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -48,8 +49,8 @@
 #include <errno.h>
 #include <dirent.h>
 #include <ext/atomicity.h>
-#include "miosix.h"
 
+#include "miosix.h"
 #include "config/miosix_settings.h"
 #include "interfaces/atomic_ops.h"
 #include "board_settings.h"
@@ -3314,7 +3315,7 @@ static void test_22()
     bool error=false;
     Thread *t2=Thread::create(t22_t2,STACK_MIN,0,0,Thread::JOINABLE);
     {
-        //Some architectures may implement atomic operations by disabling interrupts
+        //Some architectures (e.g. picorv32) implement atomic operations by disabling interrupts
         InterruptDisableLock dLock;
         t22_v5=false;
         
@@ -4724,7 +4725,7 @@ static void benchmark_4()
     #ifndef SCHED_TYPE_EDF
     Thread *T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
     #else
-    Thread *T = Thread::create(b4_t1,STACK_SMALL,0,Thread::JOINABLE);
+    Thread *T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
     #endif
     Thread::yield();
     int i=0;
@@ -4741,7 +4742,7 @@ static void benchmark_4()
     #ifndef SCHED_TYPE_EDF
     T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
     #else
-    T = Thread::create(b4_t1,STACK_SMALL,0);
+    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
     #endif
     Thread::yield();
     i=0;
@@ -4760,7 +4761,7 @@ static void benchmark_4()
     #ifndef SCHED_TYPE_EDF
     T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
     #else
-    T = Thread::create(b4_t1,STACK_SMALL,0);
+    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
     #endif
     Thread::yield();
     i=0;
@@ -4778,7 +4779,7 @@ static void benchmark_4()
     #ifndef SCHED_TYPE_EDF
     T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
     #else
-    Thread::create(b4_t1,STACK_SMALL,0);
+    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
     #endif
     Thread::yield();
     i=0;
@@ -4795,7 +4796,7 @@ static void benchmark_4()
     #ifndef SCHED_TYPE_EDF
     T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
     #else
-    Thread::create(b4_t1,STACK_SMALL,0);
+    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
     #endif
     Thread::yield();
     i=0;
