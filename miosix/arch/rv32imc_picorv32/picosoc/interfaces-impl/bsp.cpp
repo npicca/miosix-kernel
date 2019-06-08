@@ -89,11 +89,6 @@ void shutdown()
 
 void reboot()
 {
-
-    #ifdef WITH_FILESYSTEM
-    FilesystemManager::instance().umountAll();
-    #endif //WITH_FILESYSTEM
-
     disableInterrupts();
     miosix_private::IRQsystemReboot();
 }

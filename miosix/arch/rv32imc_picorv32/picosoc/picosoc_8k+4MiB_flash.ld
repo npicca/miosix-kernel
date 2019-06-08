@@ -136,6 +136,8 @@ SECTIONS
     .data : ALIGN(4)
     {
         _data = .;
+        /*This allows the use of gp register to speed up sdata access (linker relaxation)*/
+        __global_pointer$ = . + 0x800;
         *(.data)
         *(.data.*)
         *(.gnu.linkonce.d.*)
