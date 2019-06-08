@@ -34,7 +34,7 @@
 // The PARSING_FROM_IDE is because Netbeans gets confused by this, it is never
 // defined when compiling the code.
 #ifndef PARSING_FROM_IDE
-//#error This error is a reminder that you have not edited miosix_settings.h yet.
+#error This error is a reminder that you have not edited miosix_settings.h yet.
 #endif //PARSING_FROM_IDE
 
 /**
@@ -214,7 +214,7 @@ const unsigned int STACK_FILL=0xbbbbbbbb;
 
 // Compiler version checks
 #if _MIOSIX_GCC_PATCH_MAJOR > 1
-//todo: supporto per GCC8??? #warning "You are using a too new compiler, which may not be supported"
+#warning "You are using a too new compiler, which may not be supported"
 #endif
 #if !defined(_MIOSIX_GCC_PATCH_MAJOR) && _MIOSIX_GCC_PATCH_VERSION < 1
 #error "You are using a too old compiler. Get the latest one from https://miosix.org/wiki/index.php?title=Miosix_Toolchain"
