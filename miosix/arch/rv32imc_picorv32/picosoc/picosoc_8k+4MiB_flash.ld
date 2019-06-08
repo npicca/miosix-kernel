@@ -33,7 +33,7 @@
  * Note: if increasing the main stack size also increase the ORIGIN value in
  * the MEMORY definitions below accordingly.
  */
-/* TODO: capire se la stack size è giusta (1.5k o 0.5k?) */
+
 _ram_size = 0x3000;
 _ram_start = 0x0;
 _ram_end = _ram_start + _ram_size;
@@ -43,7 +43,7 @@ _main_stack_bottom = _ram_end;
 _main_stack_top  = _main_stack_bottom - _main_stack_size;
 ASSERT(_main_stack_size   % 8 == 0, "MAIN stack size error");
 
-_heap_end = _main_stack_top;                            /* end of available ram  */
+_heap_end = _main_stack_top;                  /* end of available ram  */
 
 /* identify the Entry Point  */
 ENTRY(_Z13Reset_Handlerv)

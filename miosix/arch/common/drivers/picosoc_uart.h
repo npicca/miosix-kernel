@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2019 by Terraneo Federico                               *
+ *   Copyright (C) 2019 by Picca Niccolò                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -50,8 +51,6 @@ namespace miosix {
 
         FastMutex useMutex;                ///< Only one lock because reads and writes happen at the same address
         int baudrate;                     ///< Baudrate
-
-
 
         char readChar();
 
