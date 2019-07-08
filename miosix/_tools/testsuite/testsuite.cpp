@@ -1,6 +1,5 @@
 /***************************************************************************
  *   Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013 by Terraneo Federico *
- *   Copyright (C) 2019 by Cremonese Filippo, Picca Niccolò                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -58,9 +57,6 @@
 #include "e20/e20.h"
 #include "kernel/intrusive.h"
 #include "util/crc16.h"
-#include "util/util.h"
-
-#include "miosix/util/util.h"
 
 #ifdef WITH_PROCESSES
 #include "kernel/elf_program.h"
@@ -85,7 +81,7 @@ using namespace miosix;
 // Using this instead of STACK_MIN because STACK_MIN is too low for some tests
 // and caused stack overflows when compiling with -O0
 // Note: can be reduced down to STACK_MIN if only testing with -O2
-const unsigned int STACK_SMALL=1536;
+const unsigned int STACK_SMALL=512;
 
 //Functions common to all tests
 static void test_name(const char *name);
@@ -803,7 +799,7 @@ static volatile bool t3_deleted;//Set when an instance of t3_p2 is deleted
 
 static void t3_p2(void *argv)
 {
-    const int SLEEP_TIME=30;
+    const int SLEEP_TIME=15;
     for(;;)
     {
         t3_v2=true;
@@ -827,19 +823,17 @@ static void test_3()
     }
     p->terminate();
     Thread::sleep(200); //make sure the other thread does terminate*/
-
     //Testing Thread::sleep() again
     t3_v2=false;
     p=Thread::create(t3_p2,STACK_SMALL,0,NULL);
-    //t3_p2 sleeps for 30ms, then sets t3_v2. We sleep for 20ms so t3_v2 should
+    //t3_p2 sleeps for 15ms, then sets t3_v2. We sleep for 20ms so t3_v2 should
     //be true
     Thread::sleep(20);
     if(t3_v2==false) fail("Thread::sleep() (2)");
-
     t3_v2=false;
-    //t3_p2 is sleeping for other 30ms and will set t3_v2 @ t=60ms
-    //but we check variable @ t=40ms, so it should be false
-    Thread::sleep(20);
+    //t3_p2 is sleeping for other 15ms and will set t3_v2 @ t=30ms
+    //but we check variable @ t=25ms, so it should be false
+    Thread::sleep(5);
     if(t3_v2==true) fail("Thread::sleep() (3)");
     //Giving time to t3_p2 to set t3_v2
     Thread::sleep(10);
@@ -3315,7 +3309,7 @@ static void test_22()
     bool error=false;
     Thread *t2=Thread::create(t22_t2,STACK_MIN,0,0,Thread::JOINABLE);
     {
-        //Some architectures (e.g. picorv32) implement atomic operations by disabling interrupts
+        //Some architectures may implement atomic operations by disabling interrupts
         InterruptDisableLock dLock;
         t22_v5=false;
         
@@ -4723,9 +4717,9 @@ static void benchmark_4()
     pthread_mutex_t m1=PTHREAD_MUTEX_INITIALIZER;
     b4_end=false;
     #ifndef SCHED_TYPE_EDF
-    Thread *T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL);
     #else
-    Thread *T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL,0);
     #endif
     Thread::yield();
     int i=0;
@@ -4736,32 +4730,28 @@ static void benchmark_4()
         i++;
     }
     iprintf("%d Mutex lock/unlock pairs per second\n",i);
-    T->join();
 
     b4_end=false;
     #ifndef SCHED_TYPE_EDF
-    T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL);
     #else
-    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL,0);
     #endif
     Thread::yield();
     i=0;
     while(b4_end==false)
     {
-        //write(1, "SADADS\r\n", 8);
         pthread_mutex_lock(&m1);
         pthread_mutex_unlock(&m1);
         i++;
     }
-    T->join();
     iprintf("%d pthread_mutex lock/unlock pairs per second\n",i);
-
 
     b4_end=false;
     #ifndef SCHED_TYPE_EDF
-    T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL);
     #else
-    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL,0);
     #endif
     Thread::yield();
     i=0;
@@ -4773,13 +4763,11 @@ static void benchmark_4()
     }
     iprintf("%d pause/restart kernel pairs per second\n",i);
 
-    T->join();
-
     b4_end=false;
     #ifndef SCHED_TYPE_EDF
-    T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL);
     #else
-    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL,0);
     #endif
     Thread::yield();
     i=0;
@@ -4790,13 +4778,12 @@ static void benchmark_4()
         i++;
     }
     iprintf("%d disable/enable interrupts pairs per second\n",i);
-    T->join();
-    b4_end=false;
 
+    b4_end=false;
     #ifndef SCHED_TYPE_EDF
-    T = Thread::create(b4_t1,STACK_SMALL,0, NULL, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL);
     #else
-    T = Thread::create(b4_t1,STACK_SMALL,0, Thread::JOINABLE);
+    Thread::create(b4_t1,STACK_SMALL,0);
     #endif
     Thread::yield();
     i=0;
@@ -4807,7 +4794,6 @@ static void benchmark_4()
         i++;
     }
     iprintf("%d fast disable/enable interrupts pairs per second\n",i);
-    T->join();
 }
 
 #ifdef WITH_PROCESSES
